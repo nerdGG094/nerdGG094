@@ -1,0 +1,27 @@
+name: GitHub Stats
+
+on:
+  # atualiza todo dia às 3h (UTC)
+  schedule:
+    - cron: "0 3 * * *"
+  # permite rodar manualmente pelo botão "Run workflow"
+  workflow_dispatch:
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Gerar imagem de estatísticas
+        uses: cicirello/user-statistician@v1
+        with:
+          colors: dark-dimmed
+          custom-title: Estatísticas de nerdGG094
+          animated-language-chart: true
+        env:
+          # token automático do GitHub — NÃO precisa criar nada
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
