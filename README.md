@@ -18,12 +18,10 @@
 
 </div>
 
----
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:3776AB,50:7F52FF,100:3DDC84&height=3" width="100%" alt="divider"/>
 
 <!-- ===================== SOBRE MIM ===================== -->
 ### 🧠 Sobre Mim
-
-<img align="right" width="300" src="https://user-images.githubusercontent.com/74038190/212284100-561aa473-3905-4a80-b561-0d28506553ee.gif" alt="coding gif"/>
 
 - 💻 Desenvolvedor com sólida experiência em **Python**, com forte foco na criação de scripts e automações.
 - 📱 Em evolução no **desenvolvimento Android** com **Kotlin**, construindo apps nativos e explorando o ecossistema mobile.
@@ -31,9 +29,7 @@
 - 🧰 Apaixonado por **automação de processos**, **manipulação de dados** e **eficiência de sistemas**.
 - 🐧 Usuário avançado de **Linux**, com experiência em administração de sistemas, shell scripting e otimização de ambientes.
 
-<br clear="right"/>
-
----
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:3776AB,50:7F52FF,100:3DDC84&height=3" width="100%" alt="divider"/>
 
 <!-- ===================== TECNOLOGIAS ===================== -->
 ### 🚀 Tecnologias & Ferramentas
@@ -42,7 +38,7 @@
   <img src="https://skillicons.dev/icons?i=python,flask,kotlin,postgres,linux,git,bash&perline=9" alt="skill icons"/>
 </p>
 
----
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:3776AB,50:7F52FF,100:3DDC84&height=3" width="100%" alt="divider"/>
 
 <!-- ===================== ESTATÍSTICAS DO GITHUB ===================== -->
 ### 📊 Estatísticas do GitHub
@@ -61,18 +57,7 @@
 
 </div>
 
----
-
-<!-- ===================== ANIMAÇÃO SNAKE (opcional) ===================== -->
-<!--
-  🐍 Cobrinha que "come" seus contributions. Requer uma GitHub Action.
-  Veja as instruções no final do arquivo para ativar.
--->
-<div align="center">
-  <img src="https://raw.githubusercontent.com/nerdGG094/nerdGG094/output/github-contribution-grid-snake-dark.svg" alt="snake animation"/>
-</div>
-
----
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:3776AB,50:7F52FF,100:3DDC84&height=3" width="100%" alt="divider"/>
 
 <!-- ===================== CONTATO ===================== -->
 ### 📫 Contato
@@ -92,7 +77,7 @@
   -->
 </p>
 
----
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:3776AB,50:7F52FF,100:3DDC84&height=3" width="100%" alt="divider"/>
 
 <!-- ===================== QUOTE ===================== -->
 <div align="center">
@@ -110,28 +95,5 @@
 1. [OK] Username "nerdGG094" já configurado.
 2. Este README precisa estar num repositório PÚBLICO chamado "nerdGG094"
    (mesmo nome do usuário) para aparecer no seu perfil.
-
-🐍 PARA ATIVAR A COBRINHA (SNAKE):
-   Crie o arquivo .github/workflows/snake.yml no repo com:
-
-   name: Generate Snake
-   on:
-     schedule: [{ cron: "0 0 * * *" }]
-     workflow_dispatch:
-   jobs:
-     generate:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: Platane/snk/svg-only@v3
-           with:
-             github_user_name: nerdGG094
-             outputs: |
-               dist/github-contribution-grid-snake-dark.svg?palette=github-dark
-         - uses: crazy-max/ghaction-github-pages@v4
-           with:
-             target_branch: output
-             build_dir: dist
-           env:
-             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ============================================================
 -->
