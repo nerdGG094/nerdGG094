@@ -49,16 +49,15 @@
 
 <div align="center">
 
-<img height="180em" src="https://github-readme-stats.vercel.app/api?username=nerdGG094&show_icons=true&theme=radical&include_all_commits=true&count_private=true&hide_border=true&bg_color=0D1117&title_color=7F52FF&icon_color=3DDC84"/>
-<img height="180em" src="https://github-readme-stats.vercel.app/api/top-langs/?username=nerdGG094&layout=compact&langs_count=8&theme=radical&hide_border=true&bg_color=0D1117&title_color=7F52FF"/>
-
-<br/>
-
-<img src="https://streak-stats.demolab.com?user=nerdGG094&theme=radical&hide_border=true&background=0D1117&ring=7F52FF&fire=3DDC84&currStreakLabel=7F52FF" alt="streak"/>
-
-<br/>
-
-<img src="https://github-profile-trophy.vercel.app/?username=nerdGG094&theme=radical&no-frame=true&no-bg=true&margin-w=4&column=7" alt="trophies"/>
+<!--
+  Este SVG é gerado pela Action "GitHub Stats" (cicirello/user-statistician),
+  que roda dentro do GitHub Actions e commita o arquivo no repositório.
+  Sem Vercel, sem token pessoal, sem servidor externo — nunca cai.
+  Ele já inclui: estatísticas de repositórios, contribuições e linguagens mais usadas.
+-->
+<a href="https://github.com/cicirello/user-statistician">
+  <img src="https://raw.githubusercontent.com/nerdGG094/nerdGG094/main/images/userstats.svg" alt="Estatísticas do GitHub de nerdGG094"/>
+</a>
 
 </div>
 
