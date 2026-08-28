@@ -40,25 +40,6 @@
 
 <img src="https://capsule-render.vercel.app/api?type=rect&color=0:3776AB,50:7F52FF,100:3DDC84&height=3" width="100%" alt="divider"/>
 
-<!-- ===================== ESTATÍSTICAS DO GITHUB ===================== -->
-### 📊 Estatísticas do GitHub
-
-<div align="center">
-
-<!--
-  Este SVG é gerado pela Action "GitHub Stats" (cicirello/user-statistician),
-  que roda dentro do GitHub Actions e commita o arquivo no repositório.
-  Sem Vercel, sem token pessoal, sem servidor externo — nunca cai.
-  Ele já inclui: estatísticas de repositórios, contribuições e linguagens mais usadas.
--->
-<a href="https://github.com/cicirello/user-statistician">
-  <img src="https://raw.githubusercontent.com/nerdGG094/nerdGG094/main/images/userstats.svg" alt="Estatísticas do GitHub de nerdGG094"/>
-</a>
-
-</div>
-
-<img src="https://capsule-render.vercel.app/api?type=rect&color=0:3776AB,50:7F52FF,100:3DDC84&height=3" width="100%" alt="divider"/>
-
 <!-- ===================== CONTATO ===================== -->
 ### 📫 Contato
 
