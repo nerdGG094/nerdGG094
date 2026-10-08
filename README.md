@@ -70,7 +70,7 @@ $ info_sistema --verbose
 
 <p align="center">
   <img src="https://skillicons.dev/icons?i=ts,react,nodejs,kotlin&theme=dark" height="48" alt="skill icons"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/android/android-original.svg" height="48" alt="Android"/>
+  <img src="android.svg" height="48" alt="Android"/>
   <img src="https://skillicons.dev/icons?i=postgres,linux,bash,git,github&theme=dark" height="48" alt="skill icons"/>
 </p>
 
@@ -81,7 +81,7 @@ $ info_sistema --verbose
   <img src="https://img.shields.io/badge/Node.js-0D1117?style=for-the-badge&logo=nodedotjs&logoColor=00FF9C"/>
 </p>
 
-<h3 align="center"><code>// automação, mobile & dados</code></h3>
+<h3 align="center"><code>// mobile & dados</code></h3>
 <p align="center">
   <img src="https://img.shields.io/badge/Kotlin-0D1117?style=for-the-badge&logo=kotlin&logoColor=FF00F6"/>
   <img src="https://img.shields.io/badge/PostgreSQL-0D1117?style=for-the-badge&logo=postgresql&logoColor=00E5FF"/>
