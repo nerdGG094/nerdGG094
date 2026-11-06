@@ -689,8 +689,13 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
 
     ctx.save();
     ctx.translate(ox, oy);
-    ctx.scale(P.sx, P.sy);                        // amassa e estica a partir dos pés
-    ctx.translate(0, -mid); ctx.rotate(rot); ctx.translate(0, mid);   // gira em torno do corpo
+    if (state === 'running' && player.ground && player.slide) {
+      // deslize: inclina o corpo para trás a partir dos pés, sem amassar o desenho
+      ctx.translate(14, 0); ctx.rotate(-.95);
+    } else {
+      ctx.scale(P.sx, P.sy);                      // amassa e estica a partir dos pés
+      ctx.translate(0, -mid); ctx.rotate(rot); ctx.translate(0, mid);   // gira em torno do corpo
+    }
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(sheet, sx, sy, cell.size, cell.size, -cell.cx * k, -cell.feet * k, cell.size * k, cell.size * k);
     ctx.restore();
