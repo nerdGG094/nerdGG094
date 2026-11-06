@@ -25,7 +25,16 @@ button.secondary{background:#102c20}
 kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px solid #2f6346;border-bottom-width:2px;border-radius:5px;padding:1px 6px}
 .foot{margin-top:16px;font-size:.78rem;color:var(--muted);letter-spacing:.08em}
 .foot a{color:var(--lime);text-decoration:none}
+/* modo app (Android): só o jogo e os botões, ocupando a tela deitada */
+html.app body{padding:0;height:100vh;overflow:hidden;background:#04110c}
+html.app .eyebrow,html.app .brand,html.app .subtitle,html.app .help,html.app .foot{display:none}
+html.app .arcade{width:auto}
+html.app .panel{border:0;padding:0;background:none;box-shadow:none}
+html.app canvas{width:min(100vw,calc((100vh - 62px) * 8 / 3));margin:0 auto;border:0;border-radius:0}
+html.app .controls{margin-top:6px;gap:8px}
+html.app button{min-height:48px;padding:8px 22px}
 </style>
+<script>if (/[?&]app\b/.test(location.search)) document.documentElement.classList.add('app');</script>
 </head>
 <body>
 <main class="arcade">

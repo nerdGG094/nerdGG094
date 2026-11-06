@@ -206,12 +206,12 @@ flowchart TB
 
 # 04. JABDEV ARCADE
 
-### Bebeu, reciclou. Agora pule as garrafas PET!
+### Bebeu, reciclou. Agora pule os engradados!
 
 <div align="center">
 
 <a href="https://nerdgg094.github.io/nerdGG094/arcade/">
-  <img src="images/arcade-preview.svg" alt="Jaboti Run: o mascote da Jaboti correndo, pulando garrafas PET e coletando tampinhas" width="100%"/>
+  <img src="images/jaboti-run.webp" alt="Jaboti Run: o mascote da Jaboti correndo pela calçada da fábrica, pegando a lata especial e coletando tampinhas" width="100%"/>
 </a>
 
 <br/><br/>
