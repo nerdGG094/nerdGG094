@@ -95,14 +95,14 @@ Nossa engenharia é orientada pelas necessidades do negócio e pela busca contí
 
 <div align="center">
 
-<img src="https://skillicons.dev/icons?i=python,ts,js,kotlin&theme=dark" alt="Python, TypeScript, JavaScript, Kotlin"/>&nbsp;&nbsp;<img src="android.svg" width="48" height="48" alt="Android"/>&nbsp;&nbsp;<img src="https://skillicons.dev/icons?i=nodejs,react&theme=dark" alt="Node.js, React"/>
+<img src="https://skillicons.dev/icons?i=python,ts,js,kotlin,nodejs,react&theme=dark" alt="Python, TypeScript, JavaScript, Kotlin, Node.js, React"/>
 <br/>
-<img src="https://skillicons.dev/icons?i=postgres&theme=dark" alt="PostgreSQL"/>&nbsp;&nbsp;<img src="images/oracle.svg" width="48" height="48" alt="Oracle"/>&nbsp;&nbsp;<img src="https://skillicons.dev/icons?i=linux,bash,git,github&theme=dark" alt="Linux, Bash, Git, GitHub"/>
+<img src="https://skillicons.dev/icons?i=postgres&theme=dark" alt="PostgreSQL"/>&nbsp;&nbsp;<img src="images/oracle.svg" width="48" height="48" alt="Oracle"/>&nbsp;&nbsp;<img src="https://skillicons.dev/icons?i=linux,bash,git&theme=dark" alt="Linux, Bash, Git"/>
 
 <br/>
 
-<sub><b>Linguagens</b> Python · TypeScript · JavaScript · Kotlin &nbsp;|&nbsp; <b>Apps</b> Android · Node.js · React</sub><br/>
-<sub><b>Dados</b> PostgreSQL · Oracle &nbsp;|&nbsp; <b>Infra e ferramentas</b> Linux · Bash · Git · GitHub</sub>
+<sub><b>Linguagens</b> Python · TypeScript · JavaScript · Kotlin &nbsp;|&nbsp; <b>Apps</b> Kotlin para Android · Node.js · React</sub><br/>
+<sub><b>Dados</b> PostgreSQL · Oracle &nbsp;|&nbsp; <b>Infra e ferramentas</b> Linux · Bash · Git</sub>
 
 </div>
 
