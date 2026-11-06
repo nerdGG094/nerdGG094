@@ -223,7 +223,7 @@ flowchart TB
 <br/><br/>
 
 <sub>
-<kbd>Espaço</kbd> pular (2× = mortal duplo) &nbsp;·&nbsp; <kbd>↓</kbd> deslizar &nbsp;·&nbsp; 🟡 colete tampinhas &nbsp;·&nbsp; 🌙 ciclo dia e noite &nbsp;·&nbsp; 📱 toque para jogar
+<kbd>Espaço</kbd> pular (2× = mortal duplo) &nbsp;·&nbsp; <kbd>↓</kbd> deslizar &nbsp;·&nbsp; 📦 desvie dos engradados &nbsp;·&nbsp; 🥤 garrafas Jaboti dão poderes &nbsp;·&nbsp; 📱 toque para jogar
 </sub>
 
 </div>

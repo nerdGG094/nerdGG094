@@ -31,9 +31,9 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
 <main class="arcade">
   <p class="eyebrow">JABDEV ARCADE</p>
   <h1 class="brand">JABOTI <b>RUN</b></h1>
-  <p class="subtitle">Bebeu, reciclou. Agora pule as garrafas PET!</p>
+  <p class="subtitle">Pule os engradados e beba Jaboti para ganhar poderes!</p>
   <section class="panel" aria-label="Jogo Jaboti Run">
-    <canvas id="game" aria-label="Jogo: o mascote da Jaboti corre, pula garrafas PET e coleta tampinhas"></canvas>
+    <canvas id="game" aria-label="Jogo: o mascote da Jaboti corre, pula engradados e coleta garrafas que dão poderes"></canvas>
     <div class="controls">
       <button id="jump" aria-label="Pular">▲ PULAR</button>
       <button id="duck" class="secondary" aria-label="Deslizar">▼ DESLIZAR</button>
@@ -42,6 +42,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     <p class="help">
       <kbd>Espaço</kbd> / <kbd>↑</kbd> pular (segure para ir mais alto) · aperte de novo no ar para dar um <b>mortal duplo</b><br>
       <kbd>↓</kbd> deslizar sob as latinhas · colete as <b>tampinhas douradas</b> · <kbd>P</kbd> pausa · <kbd>M</kbd> som<br>
+      <b>Garrafas dão poderes:</b> Guaraná = turbo · Cola = escudo · Laranja/Abacaxi = ímã de tampinhas ·
+      Limão/Maçã = pulo triplo · Uva = câmera lenta · Tubaína = pontos em dobro<br>
       No celular: toque na tela para pular, toque de novo no ar para o pulo duplo.
     </p>
   </section>
@@ -148,7 +150,10 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     milestone: () => { [880, 1108, 1320, 1760].forEach((f, i) => beep(f, .1, 'square', .03, 0, i * .07)); },
     slide: () => beep(220, .18, 'sawtooth', .02, .6),
     hit: () => { beep(200, .4, 'sawtooth', .06, .3); beep(90, .3, 'square', .05, .5, .05); },
-    start: () => { beep(660, .08); beep(880, .1, 'square', .05, 0, .09); }
+    start: () => { beep(660, .08); beep(880, .1, 'square', .05, 0, .09); },
+    power: () => { [523, 659, 784, 1046, 1318].forEach((f, i) => beep(f, .09, 'triangle', .05, 0, i * .055)); },
+    smash: () => { beep(160, .16, 'sawtooth', .05, .5); beep(420, .08, 'square', .03, .6, .03); },
+    shield: () => { beep(880, .2, 'triangle', .05, .5); beep(440, .25, 'sine', .05, .5, .05); }
   };
 
   // ================================================================
@@ -158,6 +163,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   let player, pose, obstacles, coins, particles, texts, clouds, birds, stars, flies;
   let speed, dist, score, bonus, caps, gap, flash, shake, hitstop, newBest, runPhase, stepIndex, celebrate;
   let hold = false, duckHeld = false;
+  let skills, items, skillTimer, invuln, pts, vel;
 
   const IDLE_POSE = {
     by: 0, rot: 0, sx: 1, sy: 1,
@@ -172,6 +178,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     obstacles = []; coins = []; particles = []; texts = [];
     speed = START_SPEED; dist = 0; score = 0; bonus = 0; caps = 0; gap = 600;
     flash = 0; shake = 0; hitstop = 0; newBest = false; runPhase = 0; stepIndex = 0; celebrate = 0;
+    skills = {}; items = []; skillTimer = 3.5; invuln = 0; pts = 0; vel = START_SPEED;
   }
   function initScenery() {
     clouds = Array.from({ length: 7 }, (_, i) => ({ x: i * 160 + Math.random() * 100, y: 26 + Math.random() * 90, s: .55 + Math.random() * .7 }));
@@ -189,11 +196,14 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     if (state === 'over') { if (player.deadT > 1.1) start(); return; }
     if (state === 'paused') { togglePause(); return; }
     if (state !== 'running') return;
-    if (!player.ground && player.coyote <= 0 && player.jumps < 2) { doubleJump(); return; }
+    if (!player.ground && player.coyote <= 0 && player.jumps < (skills.pulo > 0 ? 3 : 2)) { doubleJump(); return; }
     player.buffer = .13;
   }
   function start() {
     reset(); state = 'running'; sfx.start();
+    // ?poder=turbo começa com um poder ativo (útil para testar)
+    const q = new URLSearchParams(location.search).get('poder');
+    if (q && SKILLS[q]) activate(q, PX, GROUND - 60);
   }
   function togglePause() {
     if (state === 'running') state = 'paused';
@@ -240,7 +250,10 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     const cols = ['#d7262b', '#ffc21a', '#9bcb45', '#ffffff', '#f08a1c'];
     for (let i = 0; i < n; i++) particles.push({ type: 'confetti', x, y, vx: (Math.random() - .5) * 260, vy: -160 - Math.random() * 200, life: 1.1, max: 1.1, r: 3 + Math.random() * 3, rot: Math.random() * TAU, vr: (Math.random() - .5) * 18, color: cols[i % cols.length] });
   }
-  function popText(x, y, text, color = '#ffd84a') { texts.push({ x, y, text, color, life: .9 }); }
+  function popText(x, y, text, color = '#ffd84a') {
+    const near = texts.filter(o => o.life > .5 && Math.abs(o.x - x) < 120 && Math.abs(o.y - y) < 24).length;
+    texts.push({ x, y: y - near * 22, text, color, life: .9 });
+  }
 
   // ================================================================
   //  OBSTÁCULOS E COLETÁVEIS
@@ -251,46 +264,90 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       coins.push({ x: cx + u * spread, y: GROUND - base - peak * (1 - u * u), ph: i * .5 });
     }
   }
+  // poderes das garrafas: cada sabor ativa um efeito temporário
+  const SKILLS = {
+    turbo:  { label: 'TURBO GUARANÁ', short: 'TURBO', dur: 4.5, color: '#ffd23a', flavors: ['Guaraná', 'Guaraná Zero'] },
+    escudo: { label: 'ESCUDO COLA', short: 'ESCUDO', dur: 14, color: '#7fd0ff', flavors: ['Cola', 'Cola Zero'] },
+    ima:    { label: 'ÍMÃ DE TAMPINHAS', short: 'ÍMÃ', dur: 9, color: '#f08a1c', flavors: ['Laranja', 'Abacaxi'] },
+    pulo:   { label: 'PULO TRIPLO', short: 'PULO', dur: 9, color: '#9bcb45', flavors: ['Limão', 'Maçã'] },
+    lento:  { label: 'CÂMERA LENTA', short: 'LENTO', dur: 5, color: '#b07ae0', flavors: ['Uva'] },
+    dobro:  { label: 'PONTOS x2', short: 'x2', dur: 10, color: '#ff6a5f', flavors: ['Tubaína'] }
+  };
+  const SKILL_KEYS = Object.keys(SKILLS);
+  const flavorByName = n => FLAVORS.find(f => f.name === n);
+  const mult = () => skills.dobro > 0 ? 2 : 1;
+
+  const CRATE_W = 64, CRATE_H = CRATE_W * 90 / 129;
   function spawn() {
     const r = Math.random(), x0 = W + 40;
     let w;
-    if (score > 300 && r < .2) {
+    if (score > 120 && r < .2) {
+      // latinha voando: baixa (pular) ou alta (deslizar)
       const high = Math.random() < .5;
       obstacles.push({ kind: 'can', x: x0, y: high ? GROUND - 92 : GROUND - 30, r: 16, spin: 0, wob: Math.random() * TAU });
       w = 34;
       if (!high && Math.random() < .5) coinArc(x0 + 16, 3, 50, 70, 70);
-    } else if (score > 500 && r < .34) {
-      obstacles.push({ kind: 'crate', x: x0, w: 74, h: 44 });
-      w = 74;
-      if (Math.random() < .55) coinArc(x0 + 37, 5, 120, 110, 70);
+    } else if (r < .42) {
+      // lixeira da coleta seletiva
+      const img = pick(BIN_IMGS), h = 46;
+      obstacles.push({ kind: 'bin', x: x0, w: 50, h, img });
+      w = 50;
+      if (Math.random() < .45) coinArc(x0 + 25, 4, 70, 100, 60);
     } else {
-      let sizes;
-      if (r < .45) sizes = ['s'];
-      else if (r < .65) sizes = ['l'];
-      else if (r < .85) sizes = ['s', 's'];
-      else sizes = score > 150 ? ['s', 'l', 's'] : ['s', 's'];
-      let x = x0;
-      sizes.forEach(sz => {
-        const bw = sz === 'l' ? 32 : 24, bh = sz === 'l' ? 80 : 58;
-        obstacles.push({ kind: 'bottle', x, w: bw, h: bh, flavor: pick(FLAVORS), tilt: (Math.random() - .5) * .06 });
-        x += bw + 6;
-      });
-      w = x - x0;
-      if (Math.random() < .45) coinArc(x0 + w / 2, sizes.length > 1 ? 5 : 4, 70 + w, 105, 70);
+      // engradados: sozinho, lado a lado ou empilhados
+      let cols = 1, rows = 1;
+      const q = Math.random();
+      if (score > 80 && q < .3) cols = 2;
+      else if (score > 220 && q < .5) rows = 2;
+      else if (score > 450 && q < .6) { cols = 2; rows = 2; }
+      w = cols * CRATE_W;
+      const h = rows * CRATE_H - (rows - 1) * 4;
+      obstacles.push({ kind: 'crate', x: x0, w, h, cols, rows });
+      if (Math.random() < .5) coinArc(x0 + w / 2, cols > 1 ? 5 : 4, 60 + w, rows > 1 ? 150 : 105, 70);
     }
-    if (Math.random() < .18) for (let i = 0; i < 4; i++) coins.push({ x: x0 + w + 200 + i * 34, y: GROUND - 205, ph: i * .5, gold2: true });
+    if (Math.random() < .18) for (let i = 0; i < 4; i++) coins.push({ x: x0 + w + 200 + i * 34, y: GROUND - 205, ph: i * .5 });
     return w;
+  }
+  function spawnSkill() {
+    const key = pick(SKILL_KEYS), f = flavorByName(pick(SKILLS[key].flavors));
+    items.push({ x: W + 60, y: GROUND - 70 - Math.random() * 80, skill: key, flavor: f, ph: Math.random() * TAU });
+  }
+  function activate(key, x, y) {
+    const sk = SKILLS[key];
+    skills[key] = sk.dur;
+    sfx.power(); ring(x, y, sk.color); sparkle(x, y, 16, sk.color);
+    popText(PX + 50, GROUND - player.y - 120, sk.label, sk.color);
+    flash = Math.max(flash, .3);
+  }
+  function smash(o) {
+    o.dead = true; shake = Math.max(shake, 6);
+    const cx = o.kind === 'can' ? o.x : o.x + o.w / 2, cy = o.kind === 'can' ? o.y : GROUND - (o.h || 40) / 2;
+    const cols = o.kind === 'crate' ? ['#d7262b', '#a8131a', '#ff5a4f'] : o.kind === 'can' ? ['#c9ced3', '#ffffff', '#d7262b'] : ['#2aa555', '#2a6fd1', '#f2b705', '#d7262b'];
+    for (let i = 0; i < 18; i++) particles.push({ type: 'confetti', x: cx, y: cy, vx: 120 + Math.random() * 380, vy: -120 - Math.random() * 320, life: .9, max: .9, r: 3 + Math.random() * 4, rot: Math.random() * TAU, vr: (Math.random() - .5) * 20, color: cols[i % cols.length] });
+    bonus += 15 * mult(); popText(cx, cy - 30, '+' + 15 * mult(), '#ffffff'); sfx.smash();
+  }
+  // retorna true se o mascote morreu
+  function handleHit(o) {
+    if (skills.turbo > 0) { smash(o); return false; }
+    if (invuln > 0) return false;
+    if (skills.escudo > 0) {
+      delete skills.escudo; invuln = 1.2; smash(o); sfx.shield();
+      ring(PX, GROUND - player.y - 55, '#7fd0ff'); sparkle(PX, GROUND - player.y - 55, 20, '#bfe8ff');
+      return false;
+    }
+    die(); return true;
   }
 
   // ================================================================
   //  JOGADOR
   // ================================================================
   function jump() {
-    player.vy = JUMP_V; player.ground = false; player.jumps = 1; player.coyote = 0; player.buffer = 0;
+    player.vy = JUMP_V * (skills.pulo > 0 ? 1.15 : 1); player.ground = false; player.jumps = 1; player.coyote = 0; player.buffer = 0;
     player.stretch = 1; dust(PX, GROUND, 6, .8); sfx.jump();
   }
   function doubleJump() {
-    player.vy = clamp(Math.sqrt(Math.max(0, MAX_JUMP - player.y) * 2 * G), 320, DJUMP_V); player.jumps = 2; player.spin = 0; player.stretch = 1;
+    const cap = MAX_JUMP + (skills.pulo > 0 ? 45 : 0);
+    player.vy = clamp(Math.sqrt(Math.max(0, cap - player.y) * 2 * G), 320, DJUMP_V); player.jumps++; player.spin = 0; player.stretch = 1;
     ring(PX, GROUND - player.y - 40, '#ffffff'); sparkle(PX, GROUND - player.y - 30, 8, '#ffffff'); sfx.djump();
   }
   function playerBox() {
@@ -303,13 +360,13 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       const cx = clamp(o.x, p.x1, p.x2), cy = clamp(o.y, p.y1, p.y2);
       return (o.x - cx) ** 2 + (o.y - cy) ** 2 < (o.r - 3) ** 2;
     }
-    const top = o.kind === 'crate' ? GROUND - o.h - 10 : GROUND - o.h + 8;
+    const top = o.kind === 'crate' ? GROUND - o.h - 8 : o.kind === 'bin' ? GROUND - o.h + 6 : GROUND - o.h + 8;
     return p.x2 > o.x + 5 && p.x1 < o.x + o.w - 5 && p.y2 > top;
   }
   function die() {
     state = 'dying'; hitstop = .12; shake = 14;
     player.vy = 640; player.ground = false; player.deadT = 0; player.landedDead = false; player.spin = -1;
-    sparkle(PX + 20, GROUND - player.y - 50, 14, '#ffffff'); sfx.hit();
+    sparkle(PX + 20, GROUND - player.y - 50, 14, '#ffffff'); sfx.hit(); skills = {};
     if (score > best) { best = score; newBest = true; try { localStorage.setItem('jabotiRunBest', String(best)); } catch (e) {} }
   }
 
@@ -317,6 +374,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   //  ATUALIZAÇÃO
   // ================================================================
   function update(dt) {
+    const realDt = dt;
+    if (state === 'running' && skills.lento > 0) dt *= .55;   // câmera lenta da Uva
     t += dt;
     shake = Math.max(0, shake - dt * 40);
     flash = Math.max(0, flash - dt * 1.4);
@@ -333,10 +392,18 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     flies.forEach(f => { f.x -= scroll * .5 * dt; f.ph += dt; if (f.x < -10) f.x += W + 20; });
 
     if (state === 'running') {
+      // duração dos poderes corre em tempo real
+      invuln = Math.max(0, invuln - realDt);
+      for (const k in skills) {
+        skills[k] -= realDt;
+        if (skills[k] <= 0) { delete skills[k]; if (k === 'turbo') invuln = Math.max(invuln, .9); }
+      }
       speed = Math.min(MAX_SPEED, speed + ACCEL * dt);
-      dist += speed * dt;
+      vel = lerp(vel, speed + (skills.turbo > 0 ? 460 : 0), 1 - Math.exp(-dt * 5));
+      dist += vel * dt;
+      pts += vel * dt * .025 * mult();
       const prev = score;
-      score = Math.floor(dist * .025) + bonus;
+      score = Math.floor(pts) + bonus;
       if (Math.floor(score / 100) > Math.floor(prev / 100)) {
         flash = 1; celebrate = .8; sfx.milestone();
         confetti(PX + 10, GROUND - player.y - 80, 22);
@@ -366,30 +433,47 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       if (player.slide && Math.random() < .5) dust(PX + 18, GROUND, 1, 1.2);
 
       // passos levantam poeira
-      runPhase += dt * (9 + speed * .012);
+      runPhase += dt * (9 + vel * .012);
       const si = Math.floor(runPhase / Math.PI);
       if (si !== stepIndex) { stepIndex = si; if (player.ground && !player.slide) dust(PX - 4, GROUND, 2, .6); }
 
       obstacles.forEach(o => {
-        o.x -= speed * dt * (o.kind === 'can' ? 1.15 : 1);
+        o.x -= vel * dt + (o.kind === 'can' ? speed * .15 * dt : 0);
         if (o.kind === 'can') { o.spin += dt * 9; o.wob += dt * 6; }
       });
-      obstacles = obstacles.filter(o => o.x > -100);
-      coins.forEach(c => { c.x -= speed * dt; c.ph += dt * 5; });
-      gap -= speed * dt;
+      obstacles = obstacles.filter(o => o.x > -160 && !o.dead);
+      const magnet = skills.ima > 0;
+      coins.forEach(c => {
+        c.x -= vel * dt; c.ph += dt * 5;
+        if (magnet && c.x < PX + 330 && c.x > PX - 60) {
+          const k = 1 - Math.exp(-dt * 7), ty = GROUND - player.y - 50;
+          c.x += (PX - c.x) * k; c.y += (ty - c.y) * k;
+        }
+      });
+      items.forEach(it => { it.x -= vel * dt; it.ph += dt * 3; });
+      items = items.filter(it => it.x > -40);
+      gap -= vel * dt;
       if (gap <= 0) { const w = spawn(); gap = w + speed * (.7 + Math.random() * .75) + 190; }
+      // garrafas de poder aparecem nos espaços livres entre obstáculos
+      skillTimer -= dt;
+      if (skillTimer <= 0 && gap > 280) { spawnSkill(); skillTimer = 6 + Math.random() * 5; }
+      if (skills.turbo > 0 && Math.random() < .7) particles.push({ type: 'spark', x: PX - 20, y: GROUND - player.y - 20 - Math.random() * 60, vx: -300 - Math.random() * 200, vy: (Math.random() - .5) * 40, life: .35, max: .35, r: 2 + Math.random() * 2, color: Math.random() < .5 ? '#ffd23a' : '#ff8a3a' });
 
       const box = playerBox();
       coins = coins.filter(c => {
         if (c.x < -30) return false;
         const cx = clamp(c.x, box.x1 - 6, box.x2 + 6), cy = clamp(c.y, box.y1 - 6, box.y2 + 6);
         if ((c.x - cx) ** 2 + (c.y - cy) ** 2 < 14 * 14) {
-          caps++; bonus += 10; sfx.coin(); sparkle(c.x, c.y, 8); popText(c.x, c.y - 12, '+10');
+          caps++; bonus += 10 * mult(); sfx.coin(); sparkle(c.x, c.y, 8); popText(c.x, c.y - 12, '+' + 10 * mult());
           return false;
         }
         return true;
       });
-      if (obstacles.some(o => hits(o, box))) die();
+      items = items.filter(it => {
+        if (box.x2 > it.x - 14 && box.x1 < it.x + 14 && box.y2 > it.y - 32 && box.y1 < it.y + 32) { activate(it.skill, it.x, it.y); return false; }
+        return true;
+      });
+      for (const o of obstacles) if (!o.dead && hits(o, box) && handleHit(o)) break;
     } else if (state === 'dying' || state === 'over') {
       if (hitstop > 0) { hitstop -= dt; return; }
       player.deadT += dt;
@@ -1271,6 +1355,43 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.fillText('Jaboti', x + w / 2, top + 29);
     ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(x + 3, top + 3, w - 6, 3);
   }
+  function drawCrates(o) {
+    const im = sc('engradado');
+    if (!im) { drawCrate(o); return; }
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, GROUND + 2, o.w * .6, 5, 0, 0, TAU); ctx.fill();
+    if (!o.flavors) o.flavors = Array.from({ length: o.cols * 4 }, () => pick(FLAVORS));
+    for (let r = 0; r < o.rows; r++) for (let c = 0; c < o.cols; c++) {
+      const x = o.x + c * CRATE_W, y = GROUND - (r + 1) * CRATE_H + r * 4;
+      if (r === o.rows - 1) for (let i = 0; i < 4; i++) {
+        const f = o.flavors[c * 4 + i], bx = x + 8 + i * 13;
+        ctx.fillStyle = mix(f.liquid, 'ffffff', .15); ctx.fillRect(bx, y - 8, 7, 16);
+        ctx.fillStyle = '#' + f.cap; ctx.fillRect(bx - 1, y - 12, 9, 5);
+      }
+      ctx.drawImage(im, x, y, CRATE_W, CRATE_H);
+    }
+  }
+  function drawBinObs(o) {
+    const im = sc(o.img);
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, GROUND + 2, o.w * .55, 4, 0, 0, TAU); ctx.fill();
+    if (!im) { drawBin(o.x + 6, GROUND, BIN_IMGS.indexOf(o.img)); return; }
+    const h = o.h + 8, w = im.naturalWidth * h / im.naturalHeight;
+    ctx.drawImage(im, o.x + o.w / 2 - w / 2, GROUND - h + 4, w, h);
+  }
+  // garrafa de poder flutuando, com brilho na cor do poder
+  function drawItem(it) {
+    const sk = SKILLS[it.skill], bob = Math.sin(it.ph * 2) * 5, y = it.y + bob;
+    ctx.save();
+    const pulse = .75 + Math.sin(it.ph * 4) * .25;
+    const g = ctx.createRadialGradient(it.x, y, 4, it.x, y, 46);
+    g.addColorStop(0, sk.color + 'aa'); g.addColorStop(1, sk.color + '00');
+    ctx.globalAlpha = pulse; ctx.fillStyle = g; ctx.fillRect(it.x - 46, y - 46, 92, 92); ctx.globalAlpha = 1;
+    ctx.strokeStyle = sk.color; ctx.lineWidth = 2; ctx.globalAlpha = .6;
+    ctx.beginPath(); ctx.ellipse(it.x, y + 34, 18 + pulse * 4, 5, 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.translate(it.x, y); ctx.rotate(Math.sin(it.ph) * .12);
+    ctx.drawImage(bottleSprite(it.flavor, 24, 58), -14, -31, 28, 62);
+    ctx.restore();
+    if (Math.random() < .08) particles.push({ type: 'spark', x: it.x + (Math.random() - .5) * 30, y: y + (Math.random() - .5) * 50, vx: 0, vy: -20, life: .5, max: .5, r: 1.5 + Math.random() * 1.5, color: '#ffffff' });
+  }
   function drawCan(o) {
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
@@ -1332,6 +1453,50 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   // ================================================================
   //  INTERFACE
   // ================================================================
+  function drawPlayerFx() {
+    const cy = GROUND - player.y - 58;
+    // rastro do turbo
+    if (skills.turbo > 0 && state === 'running') {
+      for (let i = 3; i >= 1; i--) { ctx.save(); ctx.globalAlpha = .12 * (4 - i); ctx.translate(-i * 20, 0); drawMascot(); ctx.restore(); }
+    }
+    // pisca durante a invencibilidade
+    if (!(invuln > 0 && state === 'running' && Math.floor(t * 18) % 2)) drawMascot();
+    if (state !== 'running' && state !== 'paused') return;
+    // ímã: ondas laranja
+    if (skills.ima > 0) {
+      ctx.save(); ctx.strokeStyle = SKILLS.ima.color; ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) { const k = (t * 1.2 + i / 3) % 1; ctx.globalAlpha = (1 - k) * .5; ctx.beginPath(); ctx.arc(PX, cy, 40 + k * 70, -1.1, 1.1); ctx.stroke(); }
+      ctx.restore();
+    }
+    // escudo da Cola: bolha
+    if (skills.escudo > 0) {
+      const r = 62 + Math.sin(t * 6) * 2, end = skills.escudo < 2 && Math.floor(t * 10) % 2;
+      if (!end) {
+        ctx.save();
+        const g = ctx.createRadialGradient(PX - 18, cy - 22, 6, PX, cy, r);
+        g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(.7, 'rgba(127,208,255,.12)'); g.addColorStop(1, 'rgba(127,208,255,.45)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(PX, cy, r, 0, TAU); ctx.fill();
+        ctx.strokeStyle = 'rgba(200,240,255,.8)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.ellipse(PX - 24, cy - 32, 12, 6, -.6, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
+    }
+    // pulo triplo: brilho verde nos tênis
+    if (skills.pulo > 0 && Math.random() < .3) particles.push({ type: 'spark', x: PX + (Math.random() - .5) * 30, y: GROUND - player.y - 4, vx: (Math.random() - .5) * 40, vy: 30, life: .4, max: .4, r: 2, color: '#b8f06a' });
+  }
+  function drawSkillHud(ink) {
+    let y = 50;
+    for (const k of SKILL_KEYS) {
+      if (!(skills[k] > 0)) continue;
+      const sk = SKILLS[k], frac = clamp(skills[k] / sk.dur, 0, 1), f = flavorByName(sk.flavors[0]);
+      ctx.drawImage(bottleSprite(f, 24, 58), 18, y - 2, 11, 26);
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; rr(34, y + 12, 90, 7, 3.5); ctx.fill();
+      ctx.fillStyle = sk.color; rr(34, y + 12, 90 * frac, 7, 3.5); ctx.fill();
+      ctx.fillStyle = ink; ctx.font = '800 11px system-ui,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.fillText(sk.short, 34, y + 9);
+      y += 30;
+    }
+  }
   function drawHud() {
     ctx.font = '800 20px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
     ctx.textBaseline = 'top';
@@ -1340,10 +1505,12 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     const ink = dark > .5 ? '#eaf5e9' : '#063d27';
     ctx.textAlign = 'right';
     ctx.globalAlpha = .6; ctx.fillStyle = ink; ctx.fillText('HI ' + pad(best), W - 130, 16); ctx.globalAlpha = 1;
-    if (show) { ctx.fillStyle = ink; ctx.fillText(pad(score), W - 20, 16); }
+    if (show) { ctx.fillStyle = skills.dobro > 0 ? SKILLS.dobro.color : ink; ctx.fillText(pad(score), W - 20, 16); }
+    if (skills.dobro > 0) { ctx.font = '900 13px system-ui,sans-serif'; ctx.fillStyle = SKILLS.dobro.color; ctx.fillText('x2', W - 20, 40); ctx.font = '800 20px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'; }
     if (state !== 'ready') {
       drawCoin({ x: 30, y: 26, ph: 0 });
       ctx.textAlign = 'left'; ctx.fillStyle = ink; ctx.fillText('× ' + caps, 48, 16);
+      drawSkillHud(ink);
     }
     texts.forEach(x => {
       ctx.globalAlpha = clamp(x.life * 2, 0, 1);
@@ -1373,11 +1540,13 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     drawScenery();
     drawGround();
     coins.forEach(drawCoin);
-    obstacles.forEach(o => o.kind === 'can' ? drawCan(o) : o.kind === 'crate' ? drawCrate(o) : drawBottle(o));
+    obstacles.forEach(o => o.kind === 'can' ? drawCan(o) : o.kind === 'crate' ? drawCrates(o) : o.kind === 'bin' ? drawBinObs(o) : drawBottle(o));
+    items.forEach(drawItem);
     drawParticles();
-    drawMascot();
+    drawPlayerFx();
     drawForeground();
     if (dark > 0) { ctx.fillStyle = `rgba(14,22,58,${dark * .22})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
+    if (skills.lento > 0) { ctx.fillStyle = `rgba(120,60,200,${.12 * Math.min(1, skills.lento)})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
     drawGlows();
     drawSpeedLines();
     // vinheta
@@ -1389,8 +1558,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     drawHud();
     if (state === 'ready') card('JABOTI RUN', [
       ['Toque ou aperte Espaço para começar', '#eaf5e9', 18],
-      ['Pule as garrafas PET · deslize sob as latinhas', '#a8c4b1'],
-      ['Colete tampinhas douradas e faça mortal no ar!', '#ffd23a']
+      ['Pule os engradados e lixeiras · deslize sob as latinhas', '#a8c4b1'],
+      ['Pegue as garrafas Jaboti para ganhar poderes!', '#ffd23a']
     ]);
     if (state === 'paused') card('PAUSADO', [['Aperte P ou toque para continuar', '#eaf5e9', 18]]);
     if (state === 'over') card('FIM DE JOGO', [
