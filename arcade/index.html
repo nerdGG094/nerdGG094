@@ -41,7 +41,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     </div>
     <p class="help">
       <kbd>Espaço</kbd> / <kbd>↑</kbd> pular (segure para ir mais alto) · aperte de novo no ar para dar um <b>mortal duplo</b><br>
-      <kbd>↓</kbd> deslizar · colete as <b>tampinhas douradas</b> · <kbd>P</kbd> pausa · <kbd>M</kbd> som<br>
+      <kbd>↓</kbd> deslizar sob os engradados pendurados · colete as <b>tampinhas douradas</b> · <kbd>P</kbd> pausa · <kbd>M</kbd> som<br>
       <b>Garrafas dão poderes:</b> Guaraná = turbo · Cola = escudo · Laranja/Abacaxi = ímã de tampinhas ·
       Limão/Maçã = pulo triplo · Uva = câmera lenta · Tubaína = pontos em dobro<br>
       <b>Lata especial</b> (rara): turbo + ímã + pontos em dobro ao mesmo tempo!<br>
@@ -293,7 +293,11 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   function spawn() {
     const r = Math.random(), x0 = W + 40;
     let w;
-    if (r < .3) {
+    if (score > 100 && r < .16) {
+      // engradados pendurados por corda: só passa deslizando por baixo
+      obstacles.push({ kind: 'hang', x: x0, w: CRATE_W, bottom: GROUND - 64, rows: 2, sway: Math.random() * TAU });
+      w = CRATE_W;
+    } else if (r < .42) {
       // lixeira da coleta seletiva
       const img = pick(BIN_IMGS), h = 46;
       obstacles.push({ kind: 'bin', x: x0, w: 50, h, img });
@@ -338,7 +342,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   }
   function smash(o) {
     o.dead = true; shake = Math.max(shake, 6);
-    const cx = o.kind === 'can' ? o.x : o.x + o.w / 2, cy = o.kind === 'can' ? o.y : GROUND - (o.h || 40) / 2;
+    const cx = o.kind === 'can' ? o.x : o.x + o.w / 2, cy = o.kind === 'can' ? o.y : o.kind === 'hang' ? o.bottom - 40 : GROUND - (o.h || 40) / 2;
     const cols = o.kind === 'crate' ? ['#d7262b', '#a8131a', '#ff5a4f'] : o.kind === 'can' ? ['#c9ced3', '#ffffff', '#d7262b'] : ['#2aa555', '#2a6fd1', '#f2b705', '#d7262b'];
     for (let i = 0; i < 18; i++) particles.push({ type: 'confetti', x: cx, y: cy, vx: 120 + Math.random() * 380, vy: -120 - Math.random() * 320, life: .9, max: .9, r: 3 + Math.random() * 4, rot: Math.random() * TAU, vr: (Math.random() - .5) * 20, color: cols[i % cols.length] });
     bonus += 15 * mult(); popText(cx, cy - 30, '+' + 15 * mult(), '#ffffff'); sfx.smash();
@@ -373,6 +377,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     return { x1: PX - 22, x2: PX + 24, y1: GROUND - player.y - h, y2: GROUND - player.y - 3 };
   }
   function hits(o, p) {
+    if (o.kind === 'hang') return p.x2 > o.x + 6 && p.x1 < o.x + o.w - 6 && p.y1 < o.bottom;
     if (o.kind === 'can') {
       const cx = clamp(o.x, p.x1, p.x2), cy = clamp(o.y, p.y1, p.y2);
       return (o.x - cx) ** 2 + (o.y - cy) ** 2 < (o.r - 3) ** 2;
@@ -1389,6 +1394,33 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       ctx.drawImage(im, x, y, CRATE_W, CRATE_H);
     }
   }
+  function drawHang(o) {
+    const im = sc('engradado'), cx = o.x + o.w / 2, ch = CRATE_H;
+    const top = o.bottom - o.rows * ch + (o.rows - 1) * 4;
+    ctx.save();
+    ctx.translate(cx, -10); ctx.rotate(Math.sin(t * 2 + o.sway) * .035); ctx.translate(-cx, 10);
+    // cordas e gancho
+    ctx.strokeStyle = D('6b4a2a'); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx, -10); ctx.lineTo(cx, top - 26); ctx.stroke();
+    ctx.strokeStyle = D('8a6a42'); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, top - 22); ctx.lineTo(o.x + 6, top + 2); ctx.moveTo(cx, top - 22); ctx.lineTo(o.x + o.w - 6, top + 2); ctx.stroke();
+    ctx.strokeStyle = D('9aa3ad'); ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.arc(cx, top - 22, 5, Math.PI * .1, Math.PI * 1.6); ctx.stroke();
+    // engradados
+    for (let r = 0; r < o.rows; r++) {
+      const y = top + r * (ch - 4);
+      if (im) ctx.drawImage(im, o.x, y, o.w, ch);
+      else { ctx.fillStyle = '#c3242a'; rr(o.x, y, o.w, ch - 2, 6); ctx.fill(); }
+    }
+    ctx.restore();
+    // sombra no chão e aviso de deslizar
+    ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.beginPath(); ctx.ellipse(cx, GROUND + 2, o.w * .5, 4, 0, 0, TAU); ctx.fill();
+    if (o.x > PX + 60 && state === 'running' && Math.floor(t * 4) % 2) {
+      ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.strokeStyle = 'rgba(6,61,39,.8)'; ctx.lineWidth = 3;
+      ctx.font = '900 22px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.strokeText('↓', cx, o.bottom + 20); ctx.fillText('↓', cx, o.bottom + 20);
+    }
+  }
   function drawBinObs(o) {
     const im = sc(o.img);
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, GROUND + 2, o.w * .55, 4, 0, 0, TAU); ctx.fill();
@@ -1599,7 +1631,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     drawScenery();
     drawGround();
     coins.forEach(drawCoin);
-    obstacles.forEach(o => o.kind === 'can' ? drawCan(o) : o.kind === 'crate' ? drawCrates(o) : o.kind === 'bin' ? drawBinObs(o) : drawBottle(o));
+    obstacles.forEach(o => o.kind === 'can' ? drawCan(o) : o.kind === 'crate' ? drawCrates(o) : o.kind === 'bin' ? drawBinObs(o) : o.kind === 'hang' ? drawHang(o) : drawBottle(o));
     items.forEach(drawItem);
     drawParticles();
     drawPlayerFx();
@@ -1617,7 +1649,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     drawHud();
     if (state === 'ready') card('JABOTI RUN', [
       ['Toque ou aperte Espaço para começar', '#eaf5e9', 18],
-      ['Pule os engradados e as lixeiras', '#a8c4b1'],
+      ['Pule os engradados · deslize sob os pendurados', '#a8c4b1'],
       ['Pegue as garrafas Jaboti para ganhar poderes!', '#ffd23a']
     ]);
     if (state === 'paused') card('PAUSADO', [['Aperte P ou toque para continuar', '#eaf5e9', 18]]);
