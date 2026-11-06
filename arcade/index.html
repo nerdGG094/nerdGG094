@@ -286,7 +286,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   }
   function playerBox() {
     const sliding = player.slide && player.ground;
-    const h = sliding ? 58 : 102;
+    const h = sliding ? 56 : 96;
     return { x1: PX - 22, x2: PX + 24, y1: GROUND - player.y - h, y2: GROUND - player.y - 3 };
   }
   function hits(o, p) {
@@ -489,7 +489,52 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     pose.mouth = T.mouth; pose.dead = T.dead;
   }
 
+  // ================================================================
+  //  SPRITES DO MASCOTE (folha gerada no Gemini, 24 quadros de 256×256)
+  // ================================================================
+  const SPRITES = new Image(); SPRITES.src = 'assets/mascote.webp';
+  const SP = { size: 256, feet: 246, cx: 128, bodyMid: 101, scale: .62,
+    run: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], rise: 11, air: 12, fall: 13, land: 14, slide: 18, dizzy: 19, idle: [20, 21, 22, 22, 22, 21, 23, 20] };
+  const useVector = new URLSearchParams(location.search).has('vetor');
+  function spriteFrame() {
+    if (state === 'ready') return SP.idle[Math.floor(t * 3) % SP.idle.length];
+    if (state === 'dying' || state === 'over') return SP.dizzy;
+    if (player.ground && player.slide) return SP.slide;
+    if (!player.ground) return player.spin >= 0 ? SP.air : player.vy > 250 ? SP.rise : player.vy > -250 ? SP.air : SP.fall;
+    if (player.land > .55) return SP.land;
+    const n = SP.run.length;
+    return SP.run[((Math.floor(runPhase / TAU * n) % n) + n) % n];
+  }
   function drawMascot() {
+    if (useVector || !ok(SPRITES)) { drawMascotVector(); return; }
+    const P = pose, k = SP.scale, dead = state === 'dying' || state === 'over';
+    const spinRot = player.spin >= 0 ? (1 - (1 - player.spin) ** 2) * TAU : 0;
+    const rot = (dead ? player.rotDead : P.rot * .6) + spinRot;
+    const f = spriteFrame(), sx = (f % 8) * SP.size, sy = Math.floor(f / 8) * SP.size;
+    const ox = PX + player.dx, oy = GROUND - player.y + player.drop * .7;
+    const mid = SP.bodyMid * k;
+
+    // sombra
+    const sh = clamp(1 - player.y / 260, .3, 1);
+    ctx.fillStyle = 'rgba(0,0,0,.2)';
+    ctx.beginPath(); ctx.ellipse(ox, GROUND + 3, (dead && player.landedDead ? 42 : 28) * sh, 5 * sh, 0, 0, TAU); ctx.fill();
+
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.scale(P.sx, P.sy);                        // amassa e estica a partir dos pés
+    ctx.translate(0, -mid); ctx.rotate(rot); ctx.translate(0, mid);   // gira em torno do corpo
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(SPRITES, sx, sy, SP.size, SP.size, -SP.cx * k, -SP.feet * k, SP.size * k, SP.size * k);
+    ctx.restore();
+
+    // estrelinhas de tontura
+    if (dead && player.landedDead) {
+      const hx = ox + Math.sin(rot) * mid * .95, hy = oy - mid - Math.cos(rot) * mid * .95;
+      for (let i = 0; i < 3; i++) { const a = t * 4 + i * TAU / 3; star(hx + Math.cos(a) * 26, hy - 10 + Math.sin(a) * 8, 6, '#ffd23a'); }
+    }
+  }
+
+  function drawMascotVector() {
     const P = pose, R = 30;
     const spinRot = player.spin >= 0 ? (1 - (1 - player.spin) ** 2) * TAU : 0;
     const dead = state === 'dying' || state === 'over';
