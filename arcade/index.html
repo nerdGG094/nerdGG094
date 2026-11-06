@@ -103,6 +103,15 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     const i = new Image(); i.src = 'assets/cenario/' + n + '.webp'; SCENE[n] = i;
   });
   const sc = n => ok(SCENE[n]) ? SCENE[n] : null;
+  // garrafas ilustradas: 10 sabores × (2 L em cima, 600 ml embaixo), células de 64×144 com a base alinhada
+  const BOTTLES = new Image(); BOTTLES.src = 'assets/garrafas.webp';
+  function drawBottleArt(f, small, x, bottom, h) {
+    const i = FLAVORS.indexOf(f);
+    if (!ok(BOTTLES) || i < 0) return false;
+    const k = h / (small ? 115 : 140), cw = 64 * k, ch = 144 * k;
+    ctx.drawImage(BOTTLES, i * 64, small ? 144 : 0, 64, 144, x - cw / 2, bottom - ch + 2 * k, cw, ch);
+    return true;
+  }
   const BIN_IMGS = ['lixeira-vermelha', 'lixeira-azul', 'lixeira-amarela', 'lixeira-verde'];
 
   // ================================================================
@@ -1388,7 +1397,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.strokeStyle = sk.color; ctx.lineWidth = 2; ctx.globalAlpha = .6;
     ctx.beginPath(); ctx.ellipse(it.x, y + 34, 18 + pulse * 4, 5, 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
     ctx.translate(it.x, y); ctx.rotate(Math.sin(it.ph) * .12);
-    ctx.drawImage(bottleSprite(it.flavor, 24, 58), -14, -31, 28, 62);
+    if (!drawBottleArt(it.flavor, false, 0, 32, 64)) ctx.drawImage(bottleSprite(it.flavor, 24, 58), -14, -31, 28, 62);
     ctx.restore();
     if (Math.random() < .08) particles.push({ type: 'spark', x: it.x + (Math.random() - .5) * 30, y: y + (Math.random() - .5) * 50, vx: 0, vy: -20, life: .5, max: .5, r: 1.5 + Math.random() * 1.5, color: '#ffffff' });
   }
@@ -1489,7 +1498,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     for (const k of SKILL_KEYS) {
       if (!(skills[k] > 0)) continue;
       const sk = SKILLS[k], frac = clamp(skills[k] / sk.dur, 0, 1), f = flavorByName(sk.flavors[0]);
-      ctx.drawImage(bottleSprite(f, 24, 58), 18, y - 2, 11, 26);
+      if (!drawBottleArt(f, true, 24, y + 24, 26)) ctx.drawImage(bottleSprite(f, 24, 58), 18, y - 2, 11, 26);
       ctx.fillStyle = 'rgba(0,0,0,.25)'; rr(34, y + 12, 90, 7, 3.5); ctx.fill();
       ctx.fillStyle = sk.color; rr(34, y + 12, 90 * frac, 7, 3.5); ctx.fill();
       ctx.fillStyle = ink; ctx.font = '800 11px system-ui,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
