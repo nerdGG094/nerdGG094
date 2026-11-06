@@ -1,39 +1,125 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" role="img" aria-label="JABDEV Arcade: Desafio da Entrega">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" width="960" height="320" role="img" aria-label="Jaboti Run: o mascote da Jaboti pulando garrafas PET">
   <defs>
-    <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
-      <path d="M80 0H0V80" fill="none" stroke="#16442c" stroke-width="2"/>
-    </pattern>
-    <radialGradient id="glow" cx="50%" cy="0%" r="90%">
-      <stop offset="0" stop-color="#145b39"/>
-      <stop offset="1" stop-color="#04110c"/>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4fa8f5"/>
+      <stop offset="1" stop-color="#cdeeff"/>
+    </linearGradient>
+    <linearGradient id="path" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dcbf8e"/>
+      <stop offset="1" stop-color="#b8945f"/>
+    </linearGradient>
+    <radialGradient id="body" cx="35%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#ff7a6a"/>
+      <stop offset=".55" stop-color="#e2262a"/>
+      <stop offset="1" stop-color="#a8131a"/>
     </radialGradient>
-    <g id="box">
-      <rect x="-30" y="-30" width="60" height="60" rx="9" fill="#c5d1c3"/>
-      <rect x="-23" y="-23" width="46" height="46" rx="5" fill="#7e9685"/>
-      <path d="M-22 0H22" stroke="#e6eee5" stroke-width="3"/>
+    <linearGradient id="pet" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#46a569"/>
+      <stop offset=".35" stop-color="#afebc3"/>
+      <stop offset="1" stop-color="#2d8250"/>
+    </linearGradient>
+    <g id="bottle">
+      <path d="M-5 -80 V-67 Q-16 -62 -16 -55 V-3 Q-16 0 -12 0 H12 Q16 0 16 -3 V-55 Q16 -62 5 -67 V-80 Z" fill="url(#pet)" stroke="#1f5f3b" stroke-width="2"/>
+      <rect x="-16" y="-44" width="32" height="21" fill="#d7262b"/>
+      <rect x="-16" y="-36" width="32" height="5" fill="#ffd23a"/>
+      <rect x="-7" y="-86" width="14" height="9" rx="2" fill="#c81e24"/>
     </g>
+    <g id="flower">
+      <path d="M0 0 V-46" stroke="#3f8f35" stroke-width="3"/>
+      <circle cy="-46" r="11" fill="#ffc21a"/>
+      <circle cy="-46" r="5" fill="#6b3d1c"/>
+    </g>
+    <clipPath id="frame"><rect width="960" height="320" rx="16"/></clipPath>
+    <style>
+      .scroll{animation:scroll 2.6s linear infinite}
+      .scroll2{animation:scroll 2.6s linear infinite;animation-delay:-1.3s}
+      .bg{animation:bg 9s linear infinite}
+      .jump{animation:jump 2.6s infinite}
+      .legA{transform-origin:-9px -32px;animation:leg .32s ease-in-out infinite alternate}
+      .legB{transform-origin:9px -32px;animation:leg .32s ease-in-out infinite alternate-reverse}
+      .blink{transform-origin:0 -73px;animation:blink 3.4s infinite}
+      @keyframes scroll{from{transform:translateX(1020px)}to{transform:translateX(-120px)}}
+      @keyframes bg{from{transform:translateX(0)}to{transform:translateX(-480px)}}
+      @keyframes jump{
+        0%,15%{transform:translateY(0);animation-timing-function:ease-out}
+        25%{transform:translateY(-128px);animation-timing-function:ease-in}
+        35%,66%{transform:translateY(0);animation-timing-function:ease-out}
+        76%{transform:translateY(-128px);animation-timing-function:ease-in}
+        86%,100%{transform:translateY(0)}
+      }
+      @keyframes leg{from{transform:rotate(-24deg)}to{transform:rotate(24deg)}}
+      @keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+      @media (prefers-reduced-motion:reduce){.scroll,.scroll2,.bg,.jump,.legA,.legB,.blink{animation:none}}
+    </style>
   </defs>
-  <rect width="960" height="400" rx="18" fill="url(#glow)"/>
-  <rect x="16" y="16" width="928" height="368" rx="12" fill="#0a291b" stroke="#28583d"/>
-  <rect x="16" y="16" width="928" height="368" rx="12" fill="url(#grid)"/>
 
-  <use href="#box" x="140" y="90"/>
-  <use href="#box" x="300" y="210" transform="rotate(8 300 210)"/>
-  <use href="#box" x="660" y="70"/>
-  <use href="#box" x="800" y="200" transform="rotate(-6 800 200)"/>
-  <use href="#box" x="520" y="150"/>
+  <g clip-path="url(#frame)">
+    <rect width="960" height="262" fill="url(#sky)"/>
+    <circle cx="820" cy="70" r="46" fill="#fff3b0" opacity=".35"/>
+    <circle cx="820" cy="70" r="30" fill="#fff3b0"/>
 
-  <g transform="translate(470 318)">
-    <rect x="-13" y="-34" width="26" height="61" rx="8" fill="#9bcb45"/>
-    <rect x="-8" y="-45" width="16" height="14" rx="4" fill="#9bcb45"/>
-    <rect x="-8" y="-49" width="16" height="7" rx="2" fill="#e7f2d8"/>
-    <rect x="-17" y="-9" width="34" height="22" rx="5" fill="#f2f6e9"/>
-    <text x="0" y="6" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#087a45" text-anchor="middle">JAB</text>
+    <g class="bg">
+      <g fill="#fff" opacity=".92">
+        <path d="M80 70 a16 16 0 0 1 22 -14 a22 22 0 0 1 40 6 a16 16 0 0 1 4 24 h-62 a16 16 0 0 1 -4 -16z"/>
+        <path d="M360 48 a14 14 0 0 1 20 -12 a19 19 0 0 1 34 5 a14 14 0 0 1 3 21 h-54 a14 14 0 0 1 -3 -14z"/>
+        <path d="M560 82 a16 16 0 0 1 22 -14 a22 22 0 0 1 40 6 a16 16 0 0 1 4 24 h-62 a16 16 0 0 1 -4 -16z"/>
+        <path d="M840 48 a14 14 0 0 1 20 -12 a19 19 0 0 1 34 5 a14 14 0 0 1 3 21 h-54 a14 14 0 0 1 -3 -14z"/>
+        <path d="M1040 70 a16 16 0 0 1 22 -14 a22 22 0 0 1 40 6 a16 16 0 0 1 4 24 h-62 a16 16 0 0 1 -4 -16z"/>
+        <path d="M1320 48 a14 14 0 0 1 20 -12 a19 19 0 0 1 34 5 a14 14 0 0 1 3 21 h-54 a14 14 0 0 1 -3 -14z"/>
+      </g>
+      <path d="M0 262 V222 Q120 196 240 220 T480 220 T720 220 T960 220 T1200 220 T1440 220 V262 Z" fill="#7cc56a"/>
+      <g>
+        <use href="#flower" x="60" y="262"/><use href="#flower" x="210" y="262"/>
+        <use href="#flower" x="350" y="262"/><use href="#flower" x="520" y="262"/>
+        <use href="#flower" x="700" y="262"/><use href="#flower" x="860" y="262"/>
+        <use href="#flower" x="1020" y="262"/><use href="#flower" x="1170" y="262"/>
+        <use href="#flower" x="1310" y="262"/>
+      </g>
+    </g>
+
+    <rect y="258" width="960" height="10" fill="#5daa3f"/>
+    <rect y="268" width="960" height="52" fill="url(#path)"/>
+
+    <g class="scroll"><use href="#bottle" x="0" y="262"/></g>
+    <g class="scroll2"><use href="#bottle" x="0" y="262"/><use href="#bottle" x="36" y="262"/></g>
+
+    <!-- mascote -->
+    <ellipse cx="130" cy="264" rx="26" ry="5" fill="#000" opacity=".18"/>
+    <g transform="translate(130 262)">
+      <g class="jump">
+        <g class="legA">
+          <path d="M-9 -32 L-9 -12" stroke="#f4f4f4" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="-4" cy="-8" rx="12" ry="7" fill="#ffc61a" stroke="#d99b00" stroke-width="1.5"/>
+        </g>
+        <g class="legB">
+          <path d="M9 -32 L9 -12" stroke="#f4f4f4" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="14" cy="-8" rx="12" ry="7" fill="#ffc61a" stroke="#d99b00" stroke-width="1.5"/>
+        </g>
+        <path d="M-26 -56 Q-38 -58 -44 -46" stroke="#f4f4f4" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <circle cx="-44" cy="-46" r="7.5" fill="#fff" stroke="#cfcfcf" stroke-width="1.5"/>
+        <path d="M26 -56 Q38 -60 44 -72" stroke="#f4f4f4" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <circle cx="44" cy="-72" r="7.5" fill="#fff" stroke="#cfcfcf" stroke-width="1.5"/>
+        <path d="M0 -88 Q-2 -104 8 -112" stroke="#3e8f2c" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <ellipse cx="0" cy="-62" rx="32" ry="30" fill="url(#body)"/>
+        <ellipse cx="-13" cy="-78" rx="7" ry="4" fill="#fff" opacity=".35" transform="rotate(-34 -13 -78)"/>
+        <g class="blink">
+          <ellipse cx="2" cy="-71" rx="8.5" ry="10.5" fill="#fff" stroke="#3a1a12" stroke-width="1.5"/>
+          <ellipse cx="20" cy="-73" rx="8" ry="10" fill="#fff" stroke="#3a1a12" stroke-width="1.5"/>
+          <circle cx="5" cy="-70" r="4.2" fill="#1c0f0b"/><circle cx="23" cy="-72" r="4.2" fill="#1c0f0b"/>
+          <circle cx="6.5" cy="-72" r="1.4" fill="#fff"/><circle cx="24.5" cy="-74" r="1.4" fill="#fff"/>
+        </g>
+        <path d="M-5 -84 Q2 -89 9 -85 M14 -86 Q21 -90 27 -85" stroke="#3a1a12" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+        <path d="M-2 -57 Q12 -38 27 -59 Q14 -53 -2 -57 Z" fill="#5a0f12"/>
+        <ellipse cx="13" cy="-49" rx="6" ry="3.5" fill="#ff8a50"/>
+      </g>
+    </g>
+
+    <!-- título -->
+    <g font-family="system-ui,-apple-system,Segoe UI,sans-serif">
+      <rect x="300" y="78" width="360" height="118" rx="16" fill="#04140d" opacity=".72"/>
+      <text x="480" y="104" font-size="12" font-weight="700" letter-spacing="4" fill="#a8c4b1" text-anchor="middle">JABDEV ARCADE</text>
+      <text x="480" y="146" font-size="40" font-weight="900" letter-spacing="2" fill="#9bcb45" text-anchor="middle">JABOTI <tspan fill="#fff">RUN</tspan></text>
+      <text x="480" y="176" font-size="15" font-weight="600" fill="#ffd23a" text-anchor="middle">▶ Clique para jogar</text>
+    </g>
   </g>
-
-  <rect x="16" y="16" width="928" height="368" rx="12" fill="#04140d" opacity=".55"/>
-  <text x="480" y="180" font-family="system-ui,Segoe UI,sans-serif" font-size="46" font-weight="900" letter-spacing="4" fill="#9bcb45" text-anchor="middle">JABDEV ARCADE</text>
-  <text x="480" y="222" font-family="system-ui,Segoe UI,sans-serif" font-size="20" font-weight="600" letter-spacing="6" fill="#eaf5e9" text-anchor="middle">DESAFIO DA ENTREGA</text>
-  <rect x="380" y="250" width="200" height="46" rx="10" fill="#087a45" stroke="#6e9c58"/>
-  <text x="480" y="280" font-family="system-ui,Segoe UI,sans-serif" font-size="18" font-weight="800" fill="#ffffff" text-anchor="middle">▶ JOGAR</text>
 </svg>

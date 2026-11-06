@@ -35,8 +35,7 @@
   <a href="#01-engineering">Engineering</a> •
   <a href="#02-technology-stack">Stack</a> •
   <a href="#03-digital-ecosystem">Ecossistema</a> •
-  <a href="#04-github-stats">Stats</a> •
-  <a href="#05-jabdev-arcade">🎮 Arcade</a>
+  <a href="#04-jabdev-arcade">🎮 Arcade</a>
 </p>
 
 </div>
@@ -203,51 +202,31 @@ flowchart TB
 
 ---
 
-<!-- ===================== STATS ===================== -->
-
-# 04. GITHUB STATS
-
-### Atividade e linguagens, atualizadas diariamente.
-
-<div align="center">
-
-<img src="images/userstats.svg" alt="Estatísticas de nerdGG094" width="100%"/>
-
-<sub>Gerado automaticamente todos os dias pelo workflow <code>GitHub Stats</code>.</sub>
-
-</div>
-
----
-
 <!-- ===================== ARCADE ===================== -->
 
-# 05. JABDEV ARCADE
+# 04. JABDEV ARCADE
 
-### Faça uma pausa e desafie seus reflexos.
+### Bebeu, reciclou. Agora pule as garrafas PET!
 
 <div align="center">
 
 <a href="https://nerdgg094.github.io/nerdGG094/arcade/">
-  <img src="images/arcade-preview.svg" alt="JABDEV Arcade: Desafio da Entrega" width="100%"/>
+  <img src="images/arcade-preview.svg" alt="Jaboti Run: o mascote da Jaboti pulando garrafas PET" width="100%"/>
 </a>
 
 <br/><br/>
 
 <a href="https://nerdgg094.github.io/nerdGG094/arcade/">
-  <img src="https://img.shields.io/badge/%F0%9F%8E%AE%20JOGAR%20AGORA-DESAFIO%20DA%20ENTREGA-9BCB45?style=for-the-badge&labelColor=063D27"/>
+  <img src="https://img.shields.io/badge/%E2%96%B6%20JOGAR%20AGORA-JABOTI%20RUN-D7262B?style=for-the-badge&labelColor=063D27"/>
 </a>
 
+<br/><br/>
+
+<sub>
+<kbd>Espaço</kbd> / <kbd>↑</kbd> pular &nbsp;·&nbsp; <kbd>↓</kbd> abaixar &nbsp;·&nbsp; <kbd>P</kbd> pausa &nbsp;·&nbsp; 📱 toque para pular
+</sub>
+
 </div>
-
-**Desafio da Entrega** é um mini game feito em HTML, CSS e JavaScript puro, sem bibliotecas externas. Conduza a garrafa da Jaboti e desvie das caixas que caem: quanto mais tempo sobreviver, maior a pontuação, e o recorde fica salvo no seu navegador.
-
-| CONTROLE | AÇÃO |
-|:---|:---|
-| ⌨️ **← → ou A / D** | Mover a garrafa |
-| ␣ **Espaço** | Iniciar a partida |
-| 📱 **Botões ◀ ▶** | Jogar pelo celular ou mouse |
-
-<sub>O código do jogo está em <a href="arcade/index.html"><code>arcade/index.html</code></a>.</sub>
 
 ---
 

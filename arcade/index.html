@@ -4,160 +4,452 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#063d27">
-<title>JABDEV ARCADE</title>
+<title>Jaboti Run · JABDEV Arcade</title>
 <style>
-:root{--deep:#063d27;--green:#087a45;--lime:#9bcb45;--ink:#eaf5e9;--muted:#a8c4b1}
+:root{--deep:#063d27;--green:#087a45;--lime:#9bcb45;--ink:#eaf5e9;--muted:#a8c4b1;--red:#d7262b}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0%,#145b39 0,#071d14 55%,#04110c 100%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:22px}
-.arcade{width:min(100%,760px);text-align:center}
-.brand{font-weight:900;letter-spacing:.16em;color:var(--lime);font-size:clamp(1.7rem,5vw,2.8rem);margin:0}
-.subtitle{margin:5px 0 20px;color:var(--muted);letter-spacing:.18em;font-size:.78rem}
-.panel{border:1px solid #367653;border-radius:18px;background:#071a12;padding:14px;box-shadow:0 18px 60px #0008}
-.hud{display:flex;justify-content:space-between;gap:12px;padding:4px 8px 12px;font-weight:750}
-.hud span{color:var(--lime);font-variant-numeric:tabular-nums}
-canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:12px;background:#0a291b;border:1px solid #28583d;touch-action:pan-y}
-.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}
-button{border:1px solid #6e9c58;background:var(--green);color:white;padding:12px 20px;border-radius:10px;font-weight:800;font-size:1rem;cursor:pointer;min-height:46px}
+html,body{height:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0%,#145b39 0,#071d14 55%,#04110c 100%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:20px 16px}
+.arcade{width:min(100%,980px);text-align:center}
+.eyebrow{margin:0;color:var(--muted);letter-spacing:.22em;font-size:.74rem;font-weight:700}
+.brand{font-weight:900;letter-spacing:.08em;color:var(--lime);font-size:clamp(1.9rem,6vw,3.2rem);margin:4px 0 2px;line-height:1}
+.brand b{color:#fff}
+.subtitle{margin:6px 0 18px;color:var(--muted);font-size:.95rem}
+.panel{border:1px solid #367653;border-radius:18px;background:#071a12;padding:12px;box-shadow:0 18px 60px #0008}
+canvas{display:block;width:100%;height:auto;aspect-ratio:3/1;border-radius:12px;border:1px solid #28583d;touch-action:none;cursor:pointer;user-select:none;-webkit-user-select:none}
+.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+button{border:1px solid #6e9c58;background:var(--green);color:#fff;padding:12px 20px;border-radius:10px;font-weight:800;font-size:1rem;cursor:pointer;min-height:48px;touch-action:none;user-select:none;-webkit-user-select:none}
 button:hover{background:#0b9252}
 button.secondary{background:#102c20}
-.help{color:var(--muted);font-size:.88rem;line-height:1.5;margin:13px 4px 2px}
-.tag{display:inline-block;color:var(--lime);border:1px solid #416d43;border-radius:99px;padding:4px 10px;font-size:.72rem;letter-spacing:.1em;margin-top:16px}
+.help{color:var(--muted);font-size:.88rem;line-height:1.55;margin:12px 4px 2px}
+kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px solid #2f6346;border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+.foot{margin-top:16px;font-size:.78rem;color:var(--muted);letter-spacing:.08em}
+.foot a{color:var(--lime);text-decoration:none}
 </style>
 </head>
 <body>
 <main class="arcade">
-  <h1 class="brand">JABDEV ARCADE</h1>
-  <p class="subtitle">PAUSA PARA DESAFIAR SEUS REFLEXOS</p>
-  <section class="panel" aria-label="Jogo Desafio da Entrega">
-    <div class="hud"><div>PONTOS: <span id="score">0</span></div><div>RECORDE: <span id="best">0</span></div></div>
-    <canvas id="game" width="960" height="540" aria-label="Jogo: mova a garrafa para desviar das caixas"></canvas>
+  <p class="eyebrow">JABDEV ARCADE</p>
+  <h1 class="brand">JABOTI <b>RUN</b></h1>
+  <p class="subtitle">Bebeu, reciclou. Agora pule as garrafas PET!</p>
+  <section class="panel" aria-label="Jogo Jaboti Run">
+    <canvas id="game" aria-label="Jogo: o mascote da Jaboti corre e pula garrafas PET"></canvas>
     <div class="controls">
-      <button id="start">▶ INICIAR</button>
-      <button id="left" class="secondary" aria-label="Mover para esquerda">◀</button>
-      <button id="right" class="secondary" aria-label="Mover para direita">▶</button>
-      <button id="restart" class="secondary">↻ RECOMEÇAR</button>
+      <button id="jump" aria-label="Pular">▲ PULAR</button>
+      <button id="duck" class="secondary" aria-label="Abaixar">▼ ABAIXAR</button>
+      <button id="sound" class="secondary" aria-label="Som">🔊 SOM</button>
     </div>
-    <p class="help">Use <b>← →</b> ou <b>A / D</b> para mover a garrafa e desviar das caixas.<br>Também pode usar os botões na tela. Quanto mais tempo sobreviver, maior a pontuação!</p>
+    <p class="help">
+      <kbd>Espaço</kbd> ou <kbd>↑</kbd> para pular (segure para pular mais alto) ·
+      <kbd>↓</kbd> para abaixar das tampinhas · <kbd>P</kbd> pausa<br>
+      No celular, toque na tela para pular.
+    </p>
   </section>
-  <div class="tag">REFRIGERANTES JABOTI · SOFTWARE ENGINEERING</div>
+  <p class="foot">REFRIGERANTES JABOTI · <a href="https://github.com/nerdGG094">JABDEV SOFTWARE ENGINEERING</a></p>
 </main>
 <script>
 (() => {
+  const W = 960, H = 320, GROUND = 262, PX = 130;
+  const G = 2700, JUMP_V = 860, START_SPEED = 430, MAX_SPEED = 1050, ACCEL = 9;
+
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
-  const scoreEl = document.getElementById('score');
-  const bestEl = document.getElementById('best');
-  const startBtn = document.getElementById('start');
-  const restartBtn = document.getElementById('restart');
-  const W = canvas.width, H = canvas.height;
-  let player, obstacles, score, best, running, ended, last, spawn, raf;
-  let keys = {left:false,right:false};
-  try { best = Number(localStorage.getItem('jabdevArcadeBest') || 0); } catch(e) { best = 0; }
-  bestEl.textContent = best;
+  function fit() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  fit();
+  window.addEventListener('resize', fit);
+
+  let best = 0;
+  try { best = Number(localStorage.getItem('jabotiRunBest') || 0); } catch (e) {}
+
+  // ---------- som ----------
+  let audio = null, muted = false;
+  try { muted = localStorage.getItem('jabotiRunMuted') === '1'; } catch (e) {}
+  const soundBtn = document.getElementById('sound');
+  function renderSoundBtn() { soundBtn.textContent = muted ? '🔇 MUDO' : '🔊 SOM'; }
+  renderSoundBtn();
+  function beep(freq, dur, type = 'square', vol = .05, slide = 0) {
+    if (muted) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
+      o.type = type; o.frequency.setValueAtTime(freq, t);
+      if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + dur);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur);
+    } catch (e) {}
+  }
+
+  // ---------- estado ----------
+  let state, player, obstacles, clouds, flowers, particles, speed, dist, score, gap, flash, last, raf, hold, newBest;
 
   function reset() {
-    player = {x:W/2, y:H-92, w:48, h:72, speed:470};
-    obstacles = []; score = 0; spawn = 0; running = false; ended = false;
-    scoreEl.textContent = '0';
-    draw();
+    player = { y: 0, vy: 0, ground: true, duck: false };
+    obstacles = []; particles = [];
+    clouds = Array.from({ length: 5 }, (_, i) => ({ x: i * 220 + Math.random() * 120, y: 30 + Math.random() * 70, s: .7 + Math.random() * .6 }));
+    flowers = Array.from({ length: 7 }, (_, i) => ({ x: i * 150 + Math.random() * 80, s: .5 + Math.random() * .35 }));
+    speed = START_SPEED; dist = 0; score = 0; gap = 520; flash = 0; hold = false; newBest = false;
+    state = 'ready';
   }
-  function roundedRect(x,y,w,h,r,color) {
-    ctx.fillStyle=color; ctx.beginPath();
-    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.fill();
+
+  // ---------- controles ----------
+  function jump() {
+    if (state === 'ready' || state === 'over') { start(); return; }
+    if (state === 'paused') { togglePause(); return; }
+    if (player.ground) {
+      player.vy = JUMP_V; player.ground = false; player.duck = false;
+      beep(520, .12, 'square', .04, 1.8);
+    }
   }
-  function bottle(x,y) {
-    ctx.save(); ctx.translate(x,y);
-    roundedRect(-13,-34,26,61,8,'#9bcb45');
-    roundedRect(-8,-45,16,14,4,'#9bcb45');
-    roundedRect(-8,-49,16,7,2,'#e7f2d8');
-    roundedRect(-17,-9,34,22,5,'#f2f6e9');
-    ctx.fillStyle='#087a45'; ctx.font='bold 11px system-ui'; ctx.textAlign='center';
-    ctx.fillText('JAB',0,5);
+  function start() {
+    reset(); state = 'running'; last = performance.now();
+    beep(660, .08); setTimeout(() => beep(880, .1), 90);
+  }
+  function togglePause() {
+    if (state === 'running') { state = 'paused'; draw(); }
+    else if (state === 'paused') { state = 'running'; last = performance.now(); }
+  }
+  const JUMP_KEYS = [' ', 'ArrowUp', 'w', 'W'], DUCK_KEYS = ['ArrowDown', 's', 'S'];
+  document.addEventListener('keydown', e => {
+    if (JUMP_KEYS.includes(e.key) || DUCK_KEYS.includes(e.key)) e.preventDefault();
+    if (e.repeat) return;
+    if (JUMP_KEYS.includes(e.key)) { hold = true; jump(); }
+    if (DUCK_KEYS.includes(e.key)) player.duck = true;
+    if (e.key === 'p' || e.key === 'P') togglePause();
+    if (e.key === 'm' || e.key === 'M') toggleSound();
+  });
+  document.addEventListener('keyup', e => {
+    if (JUMP_KEYS.includes(e.key)) hold = false;
+    if (DUCK_KEYS.includes(e.key)) player.duck = false;
+  });
+  function holdable(el, down, up) {
+    el.addEventListener('pointerdown', e => { e.preventDefault(); down(); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, up));
+  }
+  holdable(canvas, () => { hold = true; jump(); }, () => { hold = false; });
+  holdable(document.getElementById('jump'), () => { hold = true; jump(); }, () => { hold = false; });
+  holdable(document.getElementById('duck'), () => { if (state === 'running') player.duck = true; }, () => { player.duck = false; });
+  function toggleSound() {
+    muted = !muted; renderSoundBtn();
+    try { localStorage.setItem('jabotiRunMuted', muted ? '1' : '0'); } catch (e) {}
+  }
+  soundBtn.addEventListener('click', toggleSound);
+  window.addEventListener('blur', () => { hold = false; player.duck = false; if (state === 'running') togglePause(); });
+
+  // ---------- obstáculos ----------
+  function spawn() {
+    const r = Math.random();
+    if (score > 250 && r < .22) {
+      // tampinha voando: baixa (pular), média (abaixar ou pular)
+      const lane = Math.random() < .5 ? GROUND - 30 : GROUND - 82;
+      obstacles.push({ kind: 'cap', x: W + 40, y: lane, r: 15, spin: 0 });
+      return;
+    }
+    let sizes;
+    if (r < .45) sizes = ['s'];
+    else if (r < .65) sizes = ['l'];
+    else if (r < .85) sizes = ['s', 's'];
+    else sizes = score > 150 ? ['s', 'l', 's'] : ['s', 's'];
+    let x = W + 30;
+    sizes.forEach(sz => {
+      const w = sz === 'l' ? 32 : 24, h = sz === 'l' ? 80 : 58;
+      obstacles.push({ kind: 'bottle', x, w, h, hue: Math.random() < .5 ? 'red' : 'orange' });
+      x += w + 6;
+    });
+  }
+
+  // ---------- loop ----------
+  function update(dt) {
+    speed = Math.min(MAX_SPEED, speed + ACCEL * dt);
+    dist += speed * dt;
+    const prev = score;
+    score = Math.floor(dist * .025);
+    if (Math.floor(score / 100) > Math.floor(prev / 100)) { flash = 1; beep(990, .09, 'square', .04); setTimeout(() => beep(1320, .12, 'square', .04), 100); }
+    flash = Math.max(0, flash - dt * 1.4);
+
+    if (!player.ground) {
+      let g = G;
+      if (hold && player.vy > 0) g *= .52;
+      if (player.duck) g *= 2.4;
+      player.vy -= g * dt; player.y += player.vy * dt;
+      if (player.y <= 0) {
+        player.y = 0; player.vy = 0; player.ground = true;
+        for (let i = 0; i < 6; i++) particles.push({ x: PX + (Math.random() - .5) * 30, y: GROUND, vx: -60 - Math.random() * 120, vy: -60 - Math.random() * 90, life: .45 });
+      }
+    }
+
+    obstacles.forEach(o => { o.x -= speed * dt * (o.kind === 'cap' ? 1.12 : 1); if (o.kind === 'cap') o.spin += dt * 14; });
+    obstacles = obstacles.filter(o => o.x > -80);
+    gap -= speed * dt;
+    if (gap <= 0) { spawn(); gap = speed * (.7 + Math.random() * .75) + 190; }
+
+    clouds.forEach(c => { c.x -= speed * dt * .07 * c.s; if (c.x < -140) { c.x = W + 60 + Math.random() * 200; c.y = 30 + Math.random() * 70; } });
+    flowers.forEach(f => { f.x -= speed * dt * .45; if (f.x < -40) { f.x = W + 20 + Math.random() * 260; f.s = .5 + Math.random() * .35; } });
+    particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 500 * dt; p.life -= dt; });
+    particles = particles.filter(p => p.life > 0);
+
+    if (obstacles.some(collides)) gameOver();
+  }
+
+  function playerBox() {
+    const h = player.duck && player.ground ? 62 : 90;
+    return { x1: PX - 22, x2: PX + 22, y1: GROUND - player.y - h, y2: GROUND - player.y - 2 };
+  }
+  function collides(o) {
+    const p = playerBox();
+    if (o.kind === 'cap') {
+      const cx = Math.max(p.x1, Math.min(o.x, p.x2)), cy = Math.max(p.y1, Math.min(o.y, p.y2));
+      return (o.x - cx) ** 2 + (o.y - cy) ** 2 < (o.r - 3) ** 2;
+    }
+    return p.x2 > o.x + 4 && p.x1 < o.x + o.w - 4 && p.y2 > GROUND - o.h + 6;
+  }
+  function gameOver() {
+    state = 'over';
+    beep(330, .35, 'sawtooth', .05, .4);
+    if (score > best) {
+      best = score; newBest = true;
+      try { localStorage.setItem('jabotiRunBest', String(best)); } catch (e) {}
+    }
+  }
+
+  function frame(t) {
+    raf = requestAnimationFrame(frame);
+    const dt = Math.min((t - (last || t)) / 1000, .033); last = t;
+    if (state === 'running') update(dt);
+    draw(t / 1000);
+  }
+
+  // ---------- desenho ----------
+  function lerpColor(a, b, k) {
+    const pa = a.match(/\w\w/g).map(h => parseInt(h, 16)), pb = b.match(/\w\w/g).map(h => parseInt(h, 16));
+    return 'rgb(' + pa.map((v, i) => Math.round(v + (pb[i] - v) * k)).join(',') + ')';
+  }
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  function drawSky() {
+    // ciclo dia → pôr do sol a cada 700 pontos
+    const k = (1 - Math.cos(score / 700 * Math.PI)) / 2;
+    const g = ctx.createLinearGradient(0, 0, 0, GROUND);
+    g.addColorStop(0, lerpColor('4fa8f5', 'f2884a', k));
+    g.addColorStop(1, lerpColor('cdeeff', 'ffe2a8', k));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, GROUND);
+    // sol
+    const sy = 70 + k * 90;
+    ctx.fillStyle = lerpColor('fff3b0', 'ffd06a', k);
+    ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(800, sy, 46, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(800, sy, 30, 0, 7); ctx.fill();
+    // nuvens
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    clouds.forEach(c => {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 16 * c.s, 0, 7); ctx.arc(c.x + 20 * c.s, c.y - 8 * c.s, 20 * c.s, 0, 7);
+      ctx.arc(c.x + 44 * c.s, c.y, 16 * c.s, 0, 7); ctx.rect(c.x, c.y, 44 * c.s, 16 * c.s); ctx.fill();
+    });
+    // colinas
+    const off = dist * .12;
+    ctx.fillStyle = lerpColor('7cc56a', 'b4a25a', k * .6);
+    ctx.beginPath(); ctx.moveTo(0, GROUND);
+    for (let x = 0; x <= W; x += 16) ctx.lineTo(x, GROUND - 40 - Math.sin((x + off) / 120) * 18 - Math.sin((x + off) / 47) * 6);
+    ctx.lineTo(W, GROUND); ctx.fill();
+  }
+  function drawFlower(f) {
+    const x = f.x, s = f.s, top = GROUND - 70 * s;
+    ctx.strokeStyle = '#3f8f35'; ctx.lineWidth = 4 * s;
+    ctx.beginPath(); ctx.moveTo(x, GROUND); ctx.lineTo(x, top); ctx.stroke();
+    ctx.fillStyle = '#4fa63f'; ctx.beginPath(); ctx.ellipse(x + 8 * s, GROUND - 32 * s, 9 * s, 4 * s, -.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffc21a';
+    for (let i = 0; i < 10; i++) {
+      const a = i / 10 * Math.PI * 2;
+      ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * 12 * s, top + Math.sin(a) * 12 * s, 8 * s, 4 * s, a, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = '#6b3d1c'; ctx.beginPath(); ctx.arc(x, top, 8 * s, 0, 7); ctx.fill();
+  }
+  function drawGround() {
+    ctx.fillStyle = '#5daa3f'; ctx.fillRect(0, GROUND - 4, W, 10);
+    const g = ctx.createLinearGradient(0, GROUND, 0, H);
+    g.addColorStop(0, '#dcbf8e'); g.addColorStop(1, '#b8945f');
+    ctx.fillStyle = g; ctx.fillRect(0, GROUND + 6, W, H - GROUND);
+    ctx.fillStyle = 'rgba(120,85,45,.45)';
+    const off = dist % 240;
+    for (let i = -1; i < 6; i++) {
+      const x = i * 240 - off;
+      ctx.fillRect(x + 20, GROUND + 22, 26, 3); ctx.fillRect(x + 120, GROUND + 40, 14, 3); ctx.fillRect(x + 180, GROUND + 16, 8, 3);
+    }
+  }
+
+  function drawBottle(o) {
+    const x = o.x, w = o.w, h = o.h, top = GROUND - h;
+    ctx.save();
+    // sombra
+    ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.beginPath(); ctx.ellipse(x + w / 2, GROUND + 2, w * .6, 4, 0, 0, 7); ctx.fill();
+    // corpo PET
+    const bodyTop = top + h * .3;
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, 'rgba(70,165,105,.95)'); g.addColorStop(.35, 'rgba(175,235,195,.98)'); g.addColorStop(1, 'rgba(45,130,80,.95)');
+    ctx.fillStyle = g; ctx.strokeStyle = '#1f5f3b'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w * .34, top + 8);
+    ctx.lineTo(x + w * .34, top + h * .16);
+    ctx.quadraticCurveTo(x, top + h * .22, x, bodyTop);
+    ctx.lineTo(x, GROUND - 4); ctx.quadraticCurveTo(x, GROUND, x + 4, GROUND);
+    ctx.lineTo(x + w - 4, GROUND); ctx.quadraticCurveTo(x + w, GROUND, x + w, GROUND - 4);
+    ctx.lineTo(x + w, bodyTop);
+    ctx.quadraticCurveTo(x + w, top + h * .22, x + w * .66, top + h * .16);
+    ctx.lineTo(x + w * .66, top + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // rótulo
+    const ly = top + h * .45, lh = h * .26;
+    ctx.fillStyle = o.hue === 'red' ? '#d7262b' : '#f08a1c'; ctx.fillRect(x, ly, w, lh);
+    ctx.fillStyle = '#ffd23a'; ctx.fillRect(x, ly + lh * .38, w, lh * .24);
+    // tampa
+    ctx.fillStyle = '#c81e24'; rr(x + w * .28, top, w * .44, 9, 2); ctx.fill();
+    // brilho
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(x + w * .2, bodyTop + 2, 2.5, h * .12);
     ctx.restore();
   }
-  function drawBackground() {
-    ctx.fillStyle='#0a291b'; ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle='#16442c'; ctx.lineWidth=2;
-    for(let x=0;x<W;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-    for(let y=0;y<H;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    ctx.fillStyle='#b2d88a';ctx.globalAlpha=.45;
-    for(let i=0;i<35;i++){let x=(i*137)%W,y=(i*83)%H;ctx.fillRect(x,y,3,3);}
-    ctx.globalAlpha=1;
+  function drawCap(o) {
+    ctx.save(); ctx.translate(o.x, o.y);
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    ctx.beginPath(); ctx.ellipse(18, 0, 18, 5, 0, 0, 7); ctx.fill();
+    ctx.rotate(o.spin);
+    ctx.fillStyle = '#c81e24'; ctx.beginPath();
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2, r = i % 2 ? o.r : o.r - 3;
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff5a4f'; ctx.beginPath(); ctx.arc(0, 0, o.r - 6, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffd23a'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('J', 0, 1);
+    ctx.restore();
   }
-  function draw() {
-    drawBackground();
-    obstacles.forEach(o=>{
-      roundedRect(o.x-o.w/2,o.y-o.h/2,o.w,o.h,9,'#c5d1c3');
-      roundedRect(o.x-o.w/2+7,o.y-o.h/2+7,o.w-14,o.h-14,5,'#7e9685');
-      ctx.strokeStyle='#e6eee5';ctx.lineWidth=3;ctx.beginPath();
-      ctx.moveTo(o.x-o.w/2+8,o.y);ctx.lineTo(o.x+o.w/2-8,o.y);ctx.stroke();
+
+  // mascote da marca: fruta vermelha, luvas brancas e tênis amarelos
+  function drawMascot(t) {
+    const dead = state === 'over';
+    const ducking = player.duck && player.ground && state === 'running';
+    const airborne = !player.ground;
+    const run = state === 'running' && player.ground ? dist * .045 : 0;
+    const bob = state === 'running' && player.ground && !ducking ? Math.abs(Math.sin(run)) * 3 : 0;
+    const idle = state === 'ready' ? Math.sin(t * 3) * 2 : 0;
+
+    ctx.save();
+    ctx.translate(PX, GROUND - player.y);
+    // sombra no chão
+    ctx.save(); ctx.translate(0, player.y);
+    const sh = Math.max(.35, 1 - player.y / 220);
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0, 2, 26 * sh, 5 * sh, 0, 0, 7); ctx.fill();
+    ctx.restore();
+
+    if (ducking) ctx.scale(1.12, .7);
+    const by = -62 - bob + idle, R = 30;
+
+    // pernas e tênis
+    const legs = airborne ? [[-10, -6, -14], [12, -12, 6]] : [[-9, Math.sin(run) * 12, 0], [9, -Math.sin(run) * 12, 0]];
+    legs.forEach(([hx, fx, lift]) => {
+      const fy = -8 + (airborne ? lift * .4 : Math.min(0, Math.cos(run + (hx < 0 ? 0 : Math.PI)) * 6));
+      ctx.strokeStyle = '#f4f4f4'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(hx, by + R - 6); ctx.lineTo(hx + fx * .6, fy - 4); ctx.stroke();
+      ctx.fillStyle = '#ffc61a'; ctx.strokeStyle = '#d99b00'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(hx + fx * .6 + 5, fy, 12, 7, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e8e8e8'; ctx.fillRect(hx + fx * .6 - 6, fy + 3, 22, 3);
     });
-    if(player) bottle(player.x,player.y);
-    if(!running){
-      ctx.fillStyle='#04140d';ctx.globalAlpha=.72;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;
-      ctx.textAlign='center';ctx.fillStyle='#9bcb45';ctx.font='900 42px system-ui';
-      ctx.fillText(ended?'FIM DE JOGO':'DESAFIO DA ENTREGA',W/2,H/2-12);
-      ctx.fillStyle='#eaf5e9';ctx.font='22px system-ui';
-      ctx.fillText(ended?'Clique em RECOMEÇAR para tentar novamente':'Clique em INICIAR para jogar',W/2,H/2+32);
+
+    // braços
+    const swing = airborne ? -14 : Math.sin(run) * 10;
+    [[-1, swing], [1, -swing]].forEach(([s, sw]) => {
+      const hx = s * (R + 14), hy = by + (airborne ? -10 : 8) + sw * s;
+      ctx.strokeStyle = '#f4f4f4'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(s * (R - 4), by + 6); ctx.quadraticCurveTo(s * (R + 8), by + 4, hx, hy); ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#cfcfcf'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(hx, hy, 7.5, 0, 7); ctx.fill(); ctx.stroke();
+    });
+
+    // talo e folha
+    ctx.strokeStyle = '#3e8f2c'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, by - R + 4); ctx.quadraticCurveTo(-2, by - R - 12, 8, by - R - 20); ctx.stroke();
+    // corpo
+    const g = ctx.createRadialGradient(-10, by - 12, 4, 0, by, R + 4);
+    g.addColorStop(0, '#ff7a6a'); g.addColorStop(.55, '#e2262a'); g.addColorStop(1, '#a8131a');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, by, R + 2, R, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(-13, by - 16, 7, 4, -.6, 0, 7); ctx.fill();
+
+    // olhos
+    const eyes = [[2, by - 9, 8.5, 10.5], [20, by - 11, 8, 10]];
+    if (dead) {
+      ctx.strokeStyle = '#2a1410'; ctx.lineWidth = 3;
+      eyes.forEach(([ex, ey]) => { ctx.beginPath(); ctx.moveTo(ex - 5, ey - 5); ctx.lineTo(ex + 5, ey + 5); ctx.moveTo(ex + 5, ey - 5); ctx.lineTo(ex - 5, ey + 5); ctx.stroke(); });
+    } else {
+      const blink = state === 'ready' && (t % 3.2) < .12;
+      eyes.forEach(([ex, ey, rx, ry]) => {
+        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3a1a12'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.ellipse(ex, ey, rx, blink ? 1.5 : ry, 0, 0, 7); ctx.fill(); ctx.stroke();
+        if (!blink) {
+          ctx.fillStyle = '#1c0f0b'; ctx.beginPath(); ctx.arc(ex + 3, ey + (airborne ? -2 : 1), 4.2, 0, 7); ctx.fill();
+          ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + 4.5, ey - 1 + (airborne ? -2 : 0), 1.4, 0, 7); ctx.fill();
+        }
+      });
     }
-  }
-  function hit(a,b) {
-    return Math.abs(a.x-b.x)<(a.w/2+b.w/2-8) && Math.abs(a.y-b.y)<(a.h/2+b.h/2-8);
-  }
-  function finish() {
-    running=false; ended=true;
-    if(score>best){best=score;bestEl.textContent=best;try{localStorage.setItem('jabdevArcadeBest',String(best));}catch(e){}}
-    draw();
-  }
-  function frame(t) {
-    if(!running)return;
-    const dt=Math.min((t-last)/1000,.035);last=t;
-    if(keys.left)player.x-=player.speed*dt;
-    if(keys.right)player.x+=player.speed*dt;
-    player.x=Math.max(32,Math.min(W-32,player.x));
-    spawn-=dt;
-    if(spawn<=0){
-      const size=42+Math.random()*24;
-      obstacles.push({x:45+Math.random()*(W-90),y:-45,w:size,h:size,speed:210+Math.min(score*2,260)});
-      spawn=Math.max(.34, .85-score*.004);
+    // sobrancelhas
+    ctx.strokeStyle = '#3a1a12'; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
+    const lift = airborne ? -3 : 0;
+    ctx.beginPath(); ctx.moveTo(-5, by - 22 + lift); ctx.quadraticCurveTo(2, by - 27 + lift, 9, by - 23 + lift); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14, by - 24 + lift); ctx.quadraticCurveTo(21, by - 28 + lift, 27, by - 23 + lift); ctx.stroke();
+
+    // boca
+    if (dead) {
+      ctx.fillStyle = '#5a0f12'; ctx.beginPath(); ctx.ellipse(12, by + 12, 5, 6, 0, 0, 7); ctx.fill();
+    } else {
+      ctx.fillStyle = '#5a0f12';
+      ctx.beginPath(); ctx.moveTo(-2, by + 5); ctx.quadraticCurveTo(12, by + (airborne ? 24 : 20), 27, by + 3);
+      ctx.quadraticCurveTo(14, by + 9, -2, by + 5); ctx.fill();
+      ctx.fillStyle = '#ff8a50'; ctx.beginPath(); ctx.ellipse(13, by + 13, 6, 3.5, 0, 0, 7); ctx.fill();
     }
-    obstacles.forEach(o=>o.y+=o.speed*dt);
-    obstacles=obstacles.filter(o=>o.y<H+60);
-    const box={x:player.x,y:player.y,w:player.w,h:player.h};
-    if(obstacles.some(o=>hit(box,o))){finish();return;}
-    score+=dt*10;scoreEl.textContent=Math.floor(score);
-    draw();raf=requestAnimationFrame(frame);
+    ctx.restore();
   }
-  function start(){
-    if(running)return;
-    if(ended)reset();
-    running=true;last=performance.now();startBtn.textContent='▶ EM ANDAMENTO';
-    cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);
+
+  function drawHud() {
+    ctx.font = '800 20px ui-monospace,SFMono-Regular,Menlo,monospace';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    const pad = n => String(n).padStart(5, '0');
+    const show = flash === 0 || Math.floor(flash * 8) % 2 === 0;
+    ctx.fillStyle = 'rgba(6,61,39,.55)'; ctx.fillText('HI ' + pad(best), W - 130, 16);
+    ctx.fillStyle = '#063d27'; if (show) ctx.fillText(pad(score), W - 20, 16);
   }
-  function stopKeys(){keys.left=false;keys.right=false;}
-  document.addEventListener('keydown',e=>{
-    if(['ArrowLeft','ArrowRight','a','A','d','D',' '].includes(e.key))e.preventDefault();
-    if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=true;
-    if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=true;
-    if(e.key===' '&&!running)start();
-  });
-  document.addEventListener('keyup',e=>{
-    if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=false;
-    if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=false;
-  });
-  window.addEventListener('blur',stopKeys);
-  function holdButton(id,dir){
-    const el=document.getElementById(id);
-    const on=e=>{e.preventDefault();keys[dir]=true;};
-    const off=()=>keys[dir]=false;
-    el.addEventListener('pointerdown',on);
-    ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,off));
+
+  function overlay(title, line1, line2) {
+    ctx.fillStyle = 'rgba(4,20,13,.62)'; ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#9bcb45'; ctx.font = '900 40px system-ui,Segoe UI,sans-serif';
+    ctx.fillText(title, W / 2, H / 2 - 22);
+    ctx.fillStyle = '#eaf5e9'; ctx.font = '600 19px system-ui,Segoe UI,sans-serif';
+    ctx.fillText(line1, W / 2, H / 2 + 14);
+    if (line2) { ctx.fillStyle = '#ffd23a'; ctx.font = '700 16px system-ui,Segoe UI,sans-serif'; ctx.fillText(line2, W / 2, H / 2 + 44); }
   }
-  holdButton('left','left');holdButton('right','right');
-  startBtn.addEventListener('click',start);
-  restartBtn.addEventListener('click',()=>{cancelAnimationFrame(raf);stopKeys();reset();startBtn.textContent='▶ INICIAR';});
+
+  function draw(t = 0) {
+    drawSky();
+    flowers.forEach(drawFlower);
+    drawGround();
+    obstacles.forEach(o => o.kind === 'cap' ? drawCap(o) : drawBottle(o));
+    ctx.fillStyle = 'rgba(160,125,80,.8)';
+    particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life * 2); ctx.fillRect(p.x, p.y, 4, 4); });
+    ctx.globalAlpha = 1;
+    drawMascot(t);
+    drawHud();
+    if (state === 'ready') overlay('JABOTI RUN', 'Toque ou aperte Espaço para começar', 'Pule as garrafas PET e desvie das tampinhas!');
+    if (state === 'paused') overlay('PAUSADO', 'Aperte P ou toque para continuar');
+    if (state === 'over') overlay('FIM DE JOGO', 'Pontos: ' + score + (newBest ? ' · NOVO RECORDE!' : ' · Recorde: ' + best), 'Bebeu, reciclou. Toque ou aperte Espaço para correr de novo');
+  }
+
   reset();
+  raf = requestAnimationFrame(frame);
 })();
 </script>
 </body>
