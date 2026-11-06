@@ -85,6 +85,17 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
+  // ================================================================
+  //  IMAGENS OFICIAIS (rótulos e logos do site da Jaboti)
+  // ================================================================
+  const IMG = {};
+  const load = name => { const i = new Image(); i.src = 'assets/' + name + '.png'; IMG[name] = i; return i; };
+  const ok = i => i && i.complete && i.naturalWidth > 0;
+  const FLAVORS_2L = ['2l-tubaina', '2l-jaboti-cola', '2l-jaboti-cola-zero', '2l-jaboti-abacaxi', '2l-jaboti-guarana', '2l-jaboti-guarana-zero', '2l-jaboti-limao', '2l-jaboti-maca', '2l-jaboti-uva', '2l-jaboti-laranja'];
+  const FLAVORS_600 = ['600-jaboti-cola', '600-jaboti-guarana', '600-jaboti-laranja', '600-jaboti-maca'];
+  [...FLAVORS_2L, ...FLAVORS_600, 'logo-jaboti', 'logo-frupic', 'logo-life', 'logo-skywalk', 'prod-frupic', 'prod-life', 'prod-skywalk'].forEach(load);
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+
   let best = 0;
   try { best = Number(localStorage.getItem('jabotiRunBest') || 0); } catch (e) {}
 
@@ -237,8 +248,10 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       else sizes = score > 150 ? ['s', 'l', 's'] : ['s', 's'];
       let x = x0;
       sizes.forEach(sz => {
-        const bw = sz === 'l' ? 32 : 24, bh = sz === 'l' ? 80 : 58;
-        obstacles.push({ kind: 'bottle', x, w: bw, h: bh, hue: Math.random() < .5 ? 'red' : 'orange', tilt: (Math.random() - .5) * .06 });
+        const img = IMG[pick(sz === 'l' ? FLAVORS_2L : FLAVORS_600)];
+        const bh = sz === 'l' ? 86 : 64;
+        const bw = ok(img) ? bh * img.naturalWidth / img.naturalHeight : (sz === 'l' ? 32 : 24);
+        obstacles.push({ kind: 'bottle', x, w: bw, h: bh, img, hue: Math.random() < .5 ? 'red' : 'orange', tilt: (Math.random() - .5) * .06 });
         x += bw + 6;
       });
       w = x - x0;
@@ -270,7 +283,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       return (o.x - cx) ** 2 + (o.y - cy) ** 2 < (o.r - 3) ** 2;
     }
     const top = o.kind === 'crate' ? GROUND - o.h - 10 : GROUND - o.h + 8;
-    return p.x2 > o.x + 5 && p.x1 < o.x + o.w - 5 && p.y2 > top;
+    return p.x2 > o.x + 4 && p.x1 < o.x + o.w - 4 && p.y2 > top;
   }
   function die() {
     state = 'dying'; hitstop = .12; shake = 14;
@@ -481,7 +494,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       return { H: Hp, K, F, b };
     });
     const arms = [0, 1].map(i => {
-      const S = bp(i ? 6 : -17, i ? 17 : 7);
+      const S = bp(i ? 4 : -17, i ? 23 : 7);
       const a = P['a' + i + 'u'] - rot, b = a + P['a' + i + 'f'];
       const E = { x: S.x + Math.sin(a) * 14, y: S.y + Math.cos(a) * 14 };
       const Hd = { x: E.x + Math.sin(b) * 13, y: E.y + Math.cos(b) * 13 };
@@ -525,9 +538,15 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       ctx.beginPath(); ctx.arc(A.E.x + (A.Hd.x - A.E.x) * .75, A.E.y + (A.Hd.y - A.E.y) * .75, 5.5, 0, TAU); ctx.fill();
     };
 
+    // o braço da frente nunca cobre o rosto: se a mão subir até a altura da boca, ele passa para trás do corpo
+    const localY = pt => -(pt.x - C.x) * sr + (pt.y - C.y) * cr;
+    const frontArmBehind = Math.min(localY(arms[1].E), localY(arms[1].Hd)) < R * P.sy * .75;
+    const frontArm = () => { limb([arms[1].S, arms[1].E, arms[1].Hd], 5, '#f7f7f7', '#c4c4c4'); glove(arms[1], false); };
+
     // membros de trás
     limb([legs[0].H, legs[0].K, legs[0].F], 6, '#e2e2e2', '#bdbdbd'); shoe(legs[0], true);
     limb([arms[0].S, arms[0].E, arms[0].Hd], 5, '#e2e2e2', '#bdbdbd'); glove(arms[0], true);
+    if (frontArmBehind) frontArm();
     limb([legs[1].H, legs[1].K, legs[1].F], 6, '#f7f7f7', '#c4c4c4'); shoe(legs[1], false);
 
     // corpo
@@ -596,7 +615,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.restore();
 
     // braço da frente
-    limb([arms[1].S, arms[1].E, arms[1].Hd], 5, '#f7f7f7', '#c4c4c4'); glove(arms[1], false);
+    if (!frontArmBehind) frontArm();
 
     // estrelinhas de tontura
     if (dead && player.landedDead) {
@@ -695,43 +714,130 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   const hillY = X => GROUND - 40 - (Math.sin(X / 170) * .7 + Math.sin(X / 63 + 2) * .3) * 14;
 
   const glows = [];
-  function drawFactory(x, base) {
-    const wall = D('efe4cc', .7), wall2 = D('d8ccb0', .7), roof = D('b8433a', .7), tank = D('dfe5ea', .7), tankS = D('aeb8c0', .7);
-    // tanques
-    [[150, 30, 92], [186, 26, 74]].forEach(([dx, w, h]) => {
-      const tx = x + dx, ty = base - h;
-      ctx.fillStyle = tank; ctx.fillRect(tx, ty, w, h);
-      ctx.fillStyle = tankS; ctx.fillRect(tx + w * .65, ty, w * .35, h);
-      ctx.fillStyle = tank; ctx.beginPath(); ctx.ellipse(tx + w / 2, ty, w / 2, 6, 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = D('9bcb45', .7); ctx.fillRect(tx, ty + h * .35, w, 5);
-    });
-    // chaminé e fumaça
-    const chx = x + 22, chy = base - 98;
-    ctx.fillStyle = wall2; ctx.fillRect(chx, chy, 14, 44);
-    ctx.fillStyle = roof; ctx.fillRect(chx - 2, chy, 18, 6);
-    for (let i = 0; i < 5; i++) {
-      const p = (t * .25 + i / 5) % 1;
-      ctx.fillStyle = `rgba(235,235,235,${.45 * (1 - p)})`;
-      ctx.beginPath(); ctx.arc(chx + 7 + p * 34, chy - 6 - p * 54, 6 + p * 13, 0, TAU); ctx.fill();
-    }
-    // galpão com telhado dente de serra
-    ctx.fillStyle = wall; ctx.fillRect(x, base - 58, 148, 58);
-    ctx.fillStyle = roof; ctx.beginPath(); ctx.moveTo(x - 4, base - 58);
-    for (let i = 0; i < 4; i++) { ctx.lineTo(x - 4 + i * 39 + 39, base - 74); ctx.lineTo(x - 4 + i * 39 + 39, base - 58); }
+  // fábrica da Jaboti (Jaboticabal/SP): galpão com telhado em arco azul, logo oval na fachada,
+  // paredes de tijolo bege com pilares, segundo arco à direita, ala com faixa azul e silos brancos
+  function drawArch(x0, x1, wallTop, peak, fill, rib) {
+    ctx.fillStyle = fill;
+    ctx.beginPath(); ctx.moveTo(x0, wallTop);
+    ctx.bezierCurveTo(x0 + (x1 - x0) * .08, peak, x1 - (x1 - x0) * .08, peak, x1, wallTop);
     ctx.closePath(); ctx.fill();
-    // janelas
-    for (let r = 0; r < 2; r++) for (let c = 0; c < 6; c++) {
-      const wx = x + 10 + c * 22, wy = base - 46 + r * 18;
-      ctx.fillStyle = D('7fb2cf', .5); ctx.fillRect(wx, wy, 12, 9);
-      if (dark > .2 && hash(c * 7 + r * 13 + Math.floor(x)) > .3) glows.push([wx, wy, 12, 9]);
+    ctx.save(); ctx.clip();
+    ctx.strokeStyle = rib; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let rx = x0 + 6; rx < x1; rx += 6) { ctx.moveTo(rx, wallTop); ctx.lineTo(rx, peak); }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x0, peak, (x1 - x0) * .35, wallTop - peak);
+    ctx.restore();
+  }
+  function drawFactory(x, base) {
+    const brick = D('e3cfa6', .7), brickS = D('c9b088', .7), pillar = D('8a7a62', .7);
+    const blue = D('2c68c4', .7), blueRib = D('1d4d98', .7), blue2 = D('4a86d6', .7), blue2Rib = D('3570c0', .7);
+    const navy = D('1f3f8f', .7), white = D('f2f4f6', .7), whiteS = D('c4cbd2', .7);
+
+    // silos brancos
+    [[0, 16, 104], [20, 13, 88]].forEach(([dx, w, h]) => {
+      ctx.fillStyle = white; ctx.fillRect(x + dx, base - h, w, h);
+      ctx.fillStyle = whiteS; ctx.fillRect(x + dx + w * .62, base - h, w * .38, h);
+      ctx.fillStyle = white; ctx.beginPath(); ctx.ellipse(x + dx + w / 2, base - h, w / 2, 4, 0, 0, TAU); ctx.fill();
+    });
+    // ala comprida com faixa azul "REFRIGERANTES JABOTI"
+    ctx.fillStyle = D('9aa3ad', .7); ctx.fillRect(x + 36, base - 50, 150, 4);
+    ctx.fillStyle = navy; ctx.fillRect(x + 38, base - 46, 146, 13);
+    ctx.fillStyle = brick; ctx.fillRect(x + 38, base - 33, 146, 33);
+    ctx.fillStyle = brickS; for (let i = 0; i < 8; i++) ctx.fillRect(x + 42 + i * 18, base - 30, 10, 22);
+    ctx.fillStyle = D('ffffff', .5); ctx.font = '800 7.5px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('REFRIGERANTES   JABOTI', x + 111, base - 39.5);
+
+    // segundo arco (à direita)
+    drawArch(x + 310, x + 420, base - 40, base - 84, blue2, blue2Rib);
+    ctx.fillStyle = brick; ctx.fillRect(x + 312, base - 40, 106, 40);
+    ctx.fillStyle = D('2a3a55', .7);
+    for (let i = 0; i < 3; i++) ctx.fillRect(x + 320 + i * 33, base - 30, 22, 30);
+    ctx.fillStyle = pillar; for (let i = 0; i < 4; i++) ctx.fillRect(x + 314 + i * 33, base - 40, 3, 40);
+    if (dark > .2) for (let i = 0; i < 3; i++) glows.push(['bay', x + 320 + i * 33, base - 30, 22, 30]);
+
+    // galpão principal com arco azul e logo oval
+    drawArch(x + 176, x + 336, base - 44, base - 108, blue, blueRib);
+    ctx.fillStyle = D('245aa8', .7); ctx.fillRect(x + 176, base - 47, 160, 4);
+    ctx.fillStyle = brick; ctx.fillRect(x + 178, base - 44, 156, 44);
+    ctx.fillStyle = brickS; for (let r = 0; r < 4; r++) ctx.fillRect(x + 178, base - 40 + r * 10, 156, 1);
+    ctx.fillStyle = pillar; for (let i = 0; i < 9; i++) ctx.fillRect(x + 180 + i * 19, base - 44, 3, 44);
+    ctx.fillStyle = D('3a6fb0', .7); ctx.fillRect(x + 228, base - 26, 18, 26);
+    const lx = x + 256, ly = base - 84;
+    if (ok(IMG['logo-jaboti'])) {
+      ctx.fillStyle = D('ffffff', .6); ctx.beginPath(); ctx.ellipse(lx, ly, 25, 16, -.12, 0, TAU); ctx.fill();
+      ctx.drawImage(IMG['logo-jaboti'], lx - 23, ly - 15.5, 46, 31.5);
+      if (dark > .2) glows.push(['logo', lx, ly]);
     }
-    // letreiro
-    const sx = x + 30, sy = base - 104;
-    ctx.fillStyle = D('5a4a3a', .7); ctx.fillRect(sx + 18, sy + 22, 4, 10); ctx.fillRect(sx + 66, sy + 22, 4, 10);
-    ctx.fillStyle = D('d7262b', .45); rr(sx, sy, 88, 24, 6); ctx.fill();
-    ctx.fillStyle = D('ffd23a', .45); ctx.font = 'italic 900 16px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('Jaboti', sx + 44, sy + 13);
-    if (dark > .2) glows.push(['sign', sx, sy, 88, 24]);
+    // carros estacionados
+    [[200, 'e9ecef'], [228, 'c9ced3']].forEach(([dx, c]) => {
+      ctx.fillStyle = D(c, .7); rr(x + dx, base - 8, 22, 6, 2); ctx.fill(); rr(x + dx + 5, base - 12, 12, 5, 2); ctx.fill();
+      ctx.fillStyle = D('333333', .7); ctx.beginPath(); ctx.arc(x + dx + 5, base - 2, 2.2, 0, TAU); ctx.arc(x + dx + 17, base - 2, 2.2, 0, TAU); ctx.fill();
+    });
+  }
+
+  // outdoors com as marcas da Jaboti
+  const BRANDS = [
+    { logo: 'logo-jaboti', prods: ['2l-jaboti-guarana', '2l-jaboti-cola', '2l-jaboti-laranja'], text: 'Explosão de sabor.', bg: ['ee3a3f', 'a8131a'], ink: '#ffd23a' },
+    { title: 'TUBAÍNA', sub: 'O ORIGINAL JABOTI', prods: ['2l-tubaina'], text: 'O sabor da memória!', bg: ['ffe14a', 'f2a900'], ink: '#1d3f9a' },
+    { logo: 'logo-frupic', prods: ['prod-frupic'], text: 'Frutas, cor e diversão!', bg: ['8e3aa3', '4c1660'], ink: '#ffffff' },
+    { logo: 'logo-life', prods: ['prod-life'], text: 'Pureza, leveza, naturalidade.', bg: ['ffffff', 'a9dcf7'], ink: '#0c5a9c' },
+    { logo: 'logo-skywalk', prods: ['prod-skywalk'], text: 'Aventura, altitude, energia.', bg: ['e8faf7', '7fd0c6'], ink: '#0d2b2a' },
+    { logo: 'logo-jaboti', prods: ['2l-jaboti-maca', '2l-jaboti-uva', '2l-jaboti-limao', '2l-jaboti-abacaxi'], text: '58 anos refrescando gerações', bg: ['2a9d4a', '0f5f2a'], ink: '#ffffff' }
+  ];
+  const boardCache = [];
+  function boardCanvas(i) {
+    if (boardCache[i]) return boardCache[i];
+    const b = BRANDS[i], need = [b.logo, ...b.prods].filter(Boolean);
+    if (!need.every(n => ok(IMG[n]))) return null;
+    const c = document.createElement('canvas'); c.width = 340; c.height = 170;
+    const g = c.getContext('2d');
+    const bg = g.createLinearGradient(0, 0, 340, 170); bg.addColorStop(0, '#' + b.bg[0]); bg.addColorStop(1, '#' + b.bg[1]);
+    g.fillStyle = bg; g.fillRect(0, 0, 340, 170);
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(170, 0); g.lineTo(60, 170); g.lineTo(0, 170); g.fill();
+    // produtos à direita
+    const ps = b.prods.map(n => IMG[n]), ph = 150;
+    let px = 330;
+    for (let k = ps.length - 1; k >= 0; k--) {
+      const im = ps[k], pw = ph * im.naturalWidth / im.naturalHeight;
+      px -= ps.length > 1 ? pw * .72 : pw;
+      g.drawImage(im, px, 162 - ph, pw, ph);
+    }
+    const area = Math.min(px, 210) - 12;
+    // logo ou título
+    if (b.logo) {
+      const im = IMG[b.logo], s2 = Math.min(area / im.naturalWidth, 92 / im.naturalHeight);
+      g.drawImage(im, 14 + (area - im.naturalWidth * s2) / 2, 14, im.naturalWidth * s2, im.naturalHeight * s2);
+    } else {
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = 'italic 900 40px system-ui,sans-serif';
+      g.fillStyle = '#1d3f9a'; g.fillText(b.title, 14 + area / 2 + 3, 54 + 3);
+      g.fillStyle = '#d7262b'; g.fillText(b.title, 14 + area / 2, 54);
+      g.font = '800 13px system-ui,sans-serif'; g.fillStyle = '#1d3f9a'; g.fillText(b.sub, 14 + area / 2, 92);
+    }
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = b.ink;
+    let fs = 19; g.font = `800 ${fs}px system-ui,sans-serif`;
+    while (g.measureText(b.text).width > area && fs > 11) { fs--; g.font = `800 ${fs}px system-ui,sans-serif`; }
+    g.fillText(b.text, 14 + area / 2, 134);
+    return (boardCache[i] = c);
+  }
+  function drawBillboard(x, i) {
+    const bw = 170, bh = 85, top = GROUND - 162, bottom = top + bh;
+    // estrutura
+    ctx.fillStyle = D('5b6168'); ctx.fillRect(x + 30, bottom, 7, GROUND - bottom); ctx.fillRect(x + bw - 37, bottom, 7, GROUND - bottom);
+    ctx.fillStyle = D('7b828a'); ctx.fillRect(x - 4, bottom + 2, bw + 8, 4);
+    ctx.strokeStyle = D('7b828a'); ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let k = 0; k < bw; k += 10) { ctx.moveTo(x + k, bottom + 6); ctx.lineTo(x + k + 5, bottom + 14); }
+    ctx.stroke();
+    // luminárias
+    ctx.fillStyle = D('4a4f55');
+    [x + 40, x + bw - 40].forEach(lx => { ctx.fillRect(lx - 1, top - 12, 2, 12); ctx.fillRect(lx - 7, top - 14, 14, 4); });
+    // placa
+    ctx.fillStyle = D('f4f4f4'); ctx.fillRect(x - 3, top - 3, bw + 6, bh + 6);
+    const c = boardCanvas(i);
+    if (c) ctx.drawImage(c, x, top, bw, bh);
+    else { ctx.fillStyle = '#d7262b'; ctx.fillRect(x, top, bw, bh); }
+    if (dark > .05) { ctx.fillStyle = `rgba(19,28,58,${dark * .45})`; ctx.fillRect(x - 3, top - 3, bw + 6, bh + 6); }
+    if (dark > .2) glows.push(['board', x, top, bw, bh, c]);
   }
 
   function drawTree(x, y, s) {
@@ -782,7 +888,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     for (let k = Math.floor(fo / tile) - 1; k <= Math.floor((fo + W) / tile) + 1; k++) {
       if (k !== 0 && hash(k * 3.3) < .3) continue;
       const fx = k * tile + 560 + (k === 0 ? 0 : hash(k * 9.1) * 400) - fo;
-      if (fx > -260 && fx < W + 40) drawFactory(fx, GROUND - 44);
+      if (fx > -440 && fx < W + 40) drawFactory(fx, GROUND - 42);
     }
 
     // colinas com árvores
@@ -804,6 +910,13 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
         const f = Math.sin(b.ph) * 6;
         ctx.beginPath(); ctx.moveTo(b.x - 9, b.y - f); ctx.quadraticCurveTo(b.x - 4, b.y - 3, b.x, b.y); ctx.quadraticCurveTo(b.x + 4, b.y - 3, b.x + 9, b.y - f); ctx.stroke();
       });
+    }
+
+    // outdoors
+    const bo = dist * .32, btile = 820;
+    for (let k = Math.floor(bo / btile) - 1; k <= Math.floor((bo + W) / btile) + 1; k++) {
+      const bx = k * btile + 330 + hash(k * 4.4) * 240 - bo;
+      if (bx > -200 && bx < W + 20) drawBillboard(bx, ((k % BRANDS.length) + BRANDS.length) % BRANDS.length);
     }
 
     // cerca
@@ -866,7 +979,24 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   function drawGlows() {
     if (dark < .2) return;
     glows.forEach(gw => {
-      if (gw[0] === 'sign') {
+      if (gw[0] === 'board') {
+        const [, x, y, w, h, c] = gw;
+        [x + 40, x + w - 40].forEach(lx => {
+          const g = ctx.createLinearGradient(0, y - 10, 0, y + h);
+          g.addColorStop(0, `rgba(255,240,190,${dark * .45})`); g.addColorStop(1, 'rgba(255,240,190,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(lx - 6, y - 10); ctx.lineTo(lx + 6, y - 10); ctx.lineTo(lx + 60, y + h); ctx.lineTo(lx - 60, y + h); ctx.fill();
+          ctx.fillStyle = `rgba(255,250,220,${dark})`; ctx.fillRect(lx - 6, y - 11, 12, 2);
+        });
+        if (c) { ctx.globalAlpha = dark * .55; ctx.drawImage(c, x, y, w, h); ctx.globalAlpha = 1; }
+      } else if (gw[0] === 'logo') {
+        const [, x, y] = gw;
+        const g = ctx.createRadialGradient(x, y, 4, x, y, 40);
+        g.addColorStop(0, `rgba(255,120,90,${dark * .35})`); g.addColorStop(1, 'rgba(255,120,90,0)');
+        ctx.fillStyle = g; ctx.fillRect(x - 40, y - 40, 80, 80);
+        ctx.globalAlpha = dark * .85; ctx.drawImage(IMG['logo-jaboti'], x - 23, y - 15.5, 46, 31.5); ctx.globalAlpha = 1;
+      } else if (gw[0] === 'bay') {
+        ctx.fillStyle = `rgba(255,214,130,${dark * .75})`; ctx.fillRect(gw[1], gw[2], gw[3], gw[4]);
+      } else if (gw[0] === 'sign') {
         const [, x, y, w, h] = gw;
         ctx.fillStyle = `rgba(255,90,70,${dark * .25})`; rr(x - 6, y - 6, w + 12, h + 12, 10); ctx.fill();
         ctx.fillStyle = `rgba(215,38,43,${dark * .9})`; rr(x, y, w, h, 6); ctx.fill();
@@ -893,6 +1023,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.save();
     ctx.translate(x + w / 2, GROUND); ctx.rotate(o.tilt); ctx.translate(-(x + w / 2), -GROUND);
     ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(x + w / 2, GROUND + 2, w * .7, 4, 0, 0, TAU); ctx.fill();
+    if (ok(o.img)) { ctx.drawImage(o.img, x, top, w, h); ctx.restore(); return; }
     const bodyTop = top + h * .3;
     const g = ctx.createLinearGradient(x, 0, x + w, 0);
     g.addColorStop(0, 'rgba(60,160,100,.96)'); g.addColorStop(.3, 'rgba(190,245,210,.98)'); g.addColorStop(.55, 'rgba(110,200,140,.96)'); g.addColorStop(1, 'rgba(35,120,72,.96)');
@@ -923,12 +1054,13 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   function drawCrate(o) {
     const x = o.x, w = o.w, h = o.h, top = GROUND - h;
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x + w / 2, GROUND + 2, w * .6, 5, 0, 0, TAU); ctx.fill();
-    // gargalos saindo do engradado
-    for (let i = 0; i < 4; i++) {
-      const bx = x + 9 + i * 16;
-      ctx.fillStyle = 'rgba(90,185,125,.95)'; ctx.fillRect(bx, top - 12, 9, 16);
-      ctx.fillStyle = '#c81e24'; ctx.fillRect(bx - 1, top - 16, 11, 6);
-    }
+    // garrafas 600 ml saindo do engradado
+    if (!o.imgs) o.imgs = [0, 1, 2, 3].map(() => IMG[pick(FLAVORS_600)]);
+    o.imgs.forEach((img, i) => {
+      const bx = x + 5 + i * 16;
+      if (ok(img)) ctx.drawImage(img, bx, top - 20, 54 * img.naturalWidth / img.naturalHeight, 54);
+      else { ctx.fillStyle = 'rgba(90,185,125,.95)'; ctx.fillRect(bx + 3, top - 12, 9, 16); ctx.fillStyle = '#c81e24'; ctx.fillRect(bx + 2, top - 16, 11, 6); }
+    });
     ctx.fillStyle = '#c3242a'; rr(x, top, w, h, 6); ctx.fill();
     ctx.fillStyle = '#9e1a1f'; ctx.fillRect(x, top + h - 8, w, 8);
     ctx.fillStyle = '#7d1418';
