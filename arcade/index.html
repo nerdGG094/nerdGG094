@@ -94,6 +94,15 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   ['logo-jaboti', 'logo-frupic', 'logo-life', 'logo-skywalk'].forEach(load);
   const pick = a => a[Math.floor(Math.random() * a.length)];
 
+  // cenário ilustrado no Gemini (fundo magenta removido); se alguma imagem falhar, o desenho em código assume
+  const SCENE = {};
+  ['montanhas', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira',
+   'lixeira-vermelha', 'lixeira-azul', 'lixeira-amarela', 'lixeira-verde'].forEach(n => {
+    const i = new Image(); i.src = 'assets/cenario/' + n + '.webp'; SCENE[n] = i;
+  });
+  const sc = n => ok(SCENE[n]) ? SCENE[n] : null;
+  const BIN_IMGS = ['lixeira-vermelha', 'lixeira-azul', 'lixeira-amarela', 'lixeira-verde'];
+
   // ================================================================
   //  SABORES: rótulos desenhados com base nos rótulos originais
   // ================================================================
@@ -909,8 +918,43 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.restore();
   }
 
+  // escurece as imagens à noite
+  function nightFilter(k = .6) {
+    ctx.filter = dark > .02 ? `brightness(${1 - dark * k}) saturate(${1 - dark * .35})` : 'none';
+  }
+  // repete uma faixa horizontal; cópias alternadas são espelhadas para esconder a emenda
+  function strip(im, factor, y, h, mirror = true, offset = 0) {
+    const w = im.naturalWidth * h / im.naturalHeight, o = dist * factor + offset;
+    for (let k = Math.floor(o / w); k * w - o < W; k++) {
+      const x = k * w - o;
+      if (mirror && k % 2) { ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(im, 0, 0, w + .5, h); ctx.restore(); }
+      else ctx.drawImage(im, x, y, w + .5, h);
+    }
+  }
+  function drawFactoryImg(im, x, base) {
+    const s = .4, w = im.naturalWidth * s, h = im.naturalHeight * s;
+    ctx.drawImage(im, x, base - h, w, h);
+    const logo = IMG['logo-jaboti'];
+    if (ok(logo)) {
+      const lw = 88 * s, lh = lw * logo.naturalHeight / logo.naturalWidth, lx = x + 638 * s, ly = base - h + 74 * s;
+      ctx.drawImage(logo, lx - lw / 2, ly - lh / 2, lw, lh);
+      if (dark > .2) glows.push(['logo', lx, ly, lw, lh]);
+    }
+  }
+  function drawBillboardImg(im, x, i) {
+    const s = .5, w = im.naturalWidth * s, h = im.naturalHeight * s, top = GROUND - 26 - h;
+    ctx.drawImage(im, x, top, w, h);
+    // área branca da placa na imagem: (30,13)–(288,157)
+    const bx = x + 30 * s, by = top + 13 * s, bw = 258 * s, bh = 144 * s;
+    const c = boardCanvas(i);
+    if (c) { ctx.save(); ctx.filter = 'none'; ctx.drawImage(c, bx, by, bw, bh); ctx.restore(); nightFilter(); }
+    if (dark > .05) { ctx.fillStyle = `rgba(19,28,58,${dark * .45})`; ctx.fillRect(bx, by, bw, bh); }
+    if (dark > .2) glows.push(['board', bx, by, bw, bh, c]);
+  }
+
   function drawScenery() {
     glows.length = 0;
+    if (sc('montanhas') && sc('colinas') && sc('cerca')) { drawSceneryImg(); return; }
     // montanhas distantes
     ridge(.03, GROUND - 78, 42, 1 / 160, 1 / 77, D(mix('a9cbe2', 'c9a7b8', dusk), .75));
     ridge(.06, GROUND - 58, 34, 1 / 120, 1 / 55, D(mix('8fbbd4', 'b48f9d', dusk), .72));
@@ -968,7 +1012,59 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     }
   }
 
+  function drawSceneryImg() {
+    nightFilter(.55);
+    // montanhas
+    strip(SCENE.montanhas, .03, GROUND - 190, 150);
+    // fábrica Jaboti ao longe
+    const fab = sc('fabrica'), fo = dist * .1, tile = 1250;
+    if (fab) for (let k = Math.floor(fo / tile) - 1; k <= Math.floor((fo + W) / tile) + 1; k++) {
+      if (k !== 0 && hash(k * 3.3) < .3) continue;
+      const fx = k * tile + 520 + (k === 0 ? 0 : hash(k * 9.1) * 400) - fo;
+      if (fx > -420 && fx < W + 40) drawFactoryImg(fab, fx, GROUND - 64);
+    }
+    // colinas com árvores
+    strip(SCENE.colinas, .2, GROUND - 108, 70);
+    ctx.filter = 'none';
+
+    // pássaros
+    if (dark < .6) {
+      ctx.strokeStyle = D('2b3a3f'); ctx.lineWidth = 2; ctx.lineCap = 'round';
+      birds.forEach(b => {
+        const f = Math.sin(b.ph) * 6;
+        ctx.beginPath(); ctx.moveTo(b.x - 9, b.y - f); ctx.quadraticCurveTo(b.x - 4, b.y - 3, b.x, b.y); ctx.quadraticCurveTo(b.x + 4, b.y - 3, b.x + 9, b.y - f); ctx.stroke();
+      });
+    }
+
+    nightFilter();
+    // outdoors
+    const out = sc('outdoor'), bo = dist * .32, btile = 820;
+    for (let k = Math.floor(bo / btile) - 1; k <= Math.floor((bo + W) / btile) + 1; k++) {
+      const bx = k * btile + 330 + hash(k * 4.4) * 240 - bo, b = ((k % BRANDS.length) + BRANDS.length) % BRANDS.length;
+      if (bx > -200 && bx < W + 20) out ? drawBillboardImg(out, bx, b) : drawBillboard(bx, b);
+    }
+    // cerca com girassóis
+    strip(SCENE.cerca, .5, GROUND - 82, 88);
+    // lixeiras da coleta seletiva
+    const so = dist * .55;
+    for (let k = Math.floor(so / 46) - 1; k <= Math.floor((so + W) / 46) + 1; k++) {
+      if (hash(k * 4.7) <= .93) continue;
+      const im = sc(BIN_IMGS[Math.floor(hash(k * 2.2) * 4)]);
+      if (im) { const x = k * 46 + hash(k * 8.1) * 20 - so, h = 40, w = im.naturalWidth * h / im.naturalHeight; ctx.drawImage(im, x, GROUND - h + 2, w, h); }
+    }
+    ctx.filter = 'none';
+  }
+
   function drawGround() {
+    const chao = sc('chao');
+    if (chao) {
+      nightFilter(.5);
+      const g = ctx.createLinearGradient(0, GROUND, 0, H); g.addColorStop(0, '#c9a36c'); g.addColorStop(1, '#a37845');
+      ctx.fillStyle = g; ctx.fillRect(0, GROUND, W, H - GROUND);
+      strip(chao, 1, GROUND - 24, 96);
+      ctx.filter = 'none';
+      return;
+    }
     const off = dist % 48;
     // grama
     ctx.fillStyle = D('5daa3f'); ctx.fillRect(0, GROUND - 7, W, 14);
@@ -994,7 +1090,17 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   }
 
   function drawForeground() {
-    const fo = dist * 1.3;
+    const fo = dist * 1.3, tuft = sc('grama');
+    if (tuft) {
+      nightFilter(.5);
+      for (let k = Math.floor(fo / 70) - 1; k <= Math.floor((fo + W) / 70) + 1; k++) {
+        if (hash(k * 2.3) < .5) continue;
+        const x = k * 70 + hash(k * 7.7) * 30 - fo, h = 26 + hash(k * 3.1) * 16, w = tuft.naturalWidth * h / tuft.naturalHeight;
+        ctx.drawImage(tuft, x, H - h + 6, w, h);
+      }
+      ctx.filter = 'none';
+      return;
+    }
     for (let k = Math.floor(fo / 70) - 1; k <= Math.floor((fo + W) / 70) + 1; k++) {
       if (hash(k * 2.3) < .5) continue;
       const x = k * 70 + hash(k * 7.7) * 30 - fo, s = .7 + hash(k * 3.1) * .6;
@@ -1136,6 +1242,19 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   function drawCrate(o) {
     const x = o.x, w = o.w, h = o.h, top = GROUND - h;
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x + w / 2, GROUND + 2, w * .6, 5, 0, 0, TAU); ctx.fill();
+    const im = sc('engradado');
+    if (im) {
+      // gargalos com a tampa de cada sabor aparecendo por dentro do engradado
+      if (!o.flavors) o.flavors = [0, 1, 2, 3].map(() => pick(FLAVORS));
+      const ih = w * im.naturalHeight / im.naturalWidth;
+      o.flavors.forEach((f, i) => {
+        const bx = x + 10 + i * 15;
+        ctx.fillStyle = mix(f.liquid, 'ffffff', .15); ctx.fillRect(bx, GROUND - ih - 8, 8, 18);
+        ctx.fillStyle = '#' + f.cap; ctx.fillRect(bx - 1, GROUND - ih - 12, 10, 5);
+      });
+      ctx.drawImage(im, x, GROUND - ih, w, ih);
+      return;
+    }
     // gargalos saindo do engradado, com a tampa de cada sabor
     if (!o.flavors) o.flavors = [0, 1, 2, 3].map(() => pick(FLAVORS));
     o.flavors.forEach((f, i) => {
@@ -1157,6 +1276,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
     for (let i = 1; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(o.x + 18 + i * 8, o.y - 8 + i * 4); ctx.lineTo(o.x + 30 + i * 14, o.y - 8 + i * 4); ctx.stroke(); }
     ctx.translate(o.x, o.y + Math.sin(o.wob) * 3); ctx.rotate(o.spin);
+    const im = sc('latinha');
+    if (im) { const w = 40, h = w * im.naturalHeight / im.naturalWidth; ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); return; }
     const g = ctx.createLinearGradient(-12, 0, 12, 0);
     g.addColorStop(0, '#8d969e'); g.addColorStop(.4, '#f2f5f7'); g.addColorStop(1, '#7b848c');
     ctx.fillStyle = g; rr(-12, -17, 24, 34, 5); ctx.fill();
@@ -1171,6 +1292,12 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     const gl = ctx.createRadialGradient(0, 0, 2, 0, 0, 22);
     gl.addColorStop(0, 'rgba(255,220,90,.45)'); gl.addColorStop(1, 'rgba(255,220,90,0)');
     ctx.fillStyle = gl; ctx.fillRect(-22, -22, 44, 44);
+    const spin = sc('tampinha-gira');
+    if (spin) {
+      const f = ((Math.floor(c.ph * 2) % 10) + 10) % 10;
+      ctx.drawImage(spin, f * 56, 0, 56, 56, -14, -14, 28, 28);
+      ctx.restore(); return;
+    }
     ctx.scale(Math.max(.15, Math.abs(s)), 1);
     ctx.fillStyle = '#d49a00'; ctx.beginPath();
     for (let i = 0; i < 18; i++) { const a = i / 18 * TAU, r = i % 2 ? 12 : 10.5; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
