@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#063d27">
+<title>JABDEV ARCADE</title>
+<style>
+:root{--deep:#063d27;--green:#087a45;--lime:#9bcb45;--ink:#eaf5e9;--muted:#a8c4b1}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0%,#145b39 0,#071d14 55%,#04110c 100%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:22px}
+.arcade{width:min(100%,760px);text-align:center}
+.brand{font-weight:900;letter-spacing:.16em;color:var(--lime);font-size:clamp(1.7rem,5vw,2.8rem);margin:0}
+.subtitle{margin:5px 0 20px;color:var(--muted);letter-spacing:.18em;font-size:.78rem}
+.panel{border:1px solid #367653;border-radius:18px;background:#071a12;padding:14px;box-shadow:0 18px 60px #0008}
+.hud{display:flex;justify-content:space-between;gap:12px;padding:4px 8px 12px;font-weight:750}
+.hud span{color:var(--lime);font-variant-numeric:tabular-nums}
+canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:12px;background:#0a291b;border:1px solid #28583d;touch-action:pan-y}
+.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+button{border:1px solid #6e9c58;background:var(--green);color:white;padding:12px 20px;border-radius:10px;font-weight:800;font-size:1rem;cursor:pointer;min-height:46px}
+button:hover{background:#0b9252}
+button.secondary{background:#102c20}
+.help{color:var(--muted);font-size:.88rem;line-height:1.5;margin:13px 4px 2px}
+.tag{display:inline-block;color:var(--lime);border:1px solid #416d43;border-radius:99px;padding:4px 10px;font-size:.72rem;letter-spacing:.1em;margin-top:16px}
+</style>
+</head>
+<body>
+<main class="arcade">
+  <h1 class="brand">JABDEV ARCADE</h1>
+  <p class="subtitle">PAUSA PARA DESAFIAR SEUS REFLEXOS</p>
+  <section class="panel" aria-label="Jogo Desafio da Entrega">
+    <div class="hud"><div>PONTOS: <span id="score">0</span></div><div>RECORDE: <span id="best">0</span></div></div>
+    <canvas id="game" width="960" height="540" aria-label="Jogo: mova a garrafa para desviar das caixas"></canvas>
+    <div class="controls">
+      <button id="start">▶ INICIAR</button>
+      <button id="left" class="secondary" aria-label="Mover para esquerda">◀</button>
+      <button id="right" class="secondary" aria-label="Mover para direita">▶</button>
+      <button id="restart" class="secondary">↻ RECOMEÇAR</button>
+    </div>
+    <p class="help">Use <b>← →</b> ou <b>A / D</b> para mover a garrafa e desviar das caixas.<br>Também pode usar os botões na tela. Quanto mais tempo sobreviver, maior a pontuação!</p>
+  </section>
+  <div class="tag">REFRIGERANTES JABOTI · SOFTWARE ENGINEERING</div>
+</main>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const startBtn = document.getElementById('start');
+  const restartBtn = document.getElementById('restart');
+  const W = canvas.width, H = canvas.height;
+  let player, obstacles, score, best, running, ended, last, spawn, raf;
+  let keys = {left:false,right:false};
+  try { best = Number(localStorage.getItem('jabdevArcadeBest') || 0); } catch(e) { best = 0; }
+  bestEl.textContent = best;
+
+  function reset() {
+    player = {x:W/2, y:H-92, w:48, h:72, speed:470};
+    obstacles = []; score = 0; spawn = 0; running = false; ended = false;
+    scoreEl.textContent = '0';
+    draw();
+  }
+  function roundedRect(x,y,w,h,r,color) {
+    ctx.fillStyle=color; ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.fill();
+  }
+  function bottle(x,y) {
+    ctx.save(); ctx.translate(x,y);
+    roundedRect(-13,-34,26,61,8,'#9bcb45');
+    roundedRect(-8,-45,16,14,4,'#9bcb45');
+    roundedRect(-8,-49,16,7,2,'#e7f2d8');
+    roundedRect(-17,-9,34,22,5,'#f2f6e9');
+    ctx.fillStyle='#087a45'; ctx.font='bold 11px system-ui'; ctx.textAlign='center';
+    ctx.fillText('JAB',0,5);
+    ctx.restore();
+  }
+  function drawBackground() {
+    ctx.fillStyle='#0a291b'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#16442c'; ctx.lineWidth=2;
+    for(let x=0;x<W;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.fillStyle='#b2d88a';ctx.globalAlpha=.45;
+    for(let i=0;i<35;i++){let x=(i*137)%W,y=(i*83)%H;ctx.fillRect(x,y,3,3);}
+    ctx.globalAlpha=1;
+  }
+  function draw() {
+    drawBackground();
+    obstacles.forEach(o=>{
+      roundedRect(o.x-o.w/2,o.y-o.h/2,o.w,o.h,9,'#c5d1c3');
+      roundedRect(o.x-o.w/2+7,o.y-o.h/2+7,o.w-14,o.h-14,5,'#7e9685');
+      ctx.strokeStyle='#e6eee5';ctx.lineWidth=3;ctx.beginPath();
+      ctx.moveTo(o.x-o.w/2+8,o.y);ctx.lineTo(o.x+o.w/2-8,o.y);ctx.stroke();
+    });
+    if(player) bottle(player.x,player.y);
+    if(!running){
+      ctx.fillStyle='#04140d';ctx.globalAlpha=.72;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;
+      ctx.textAlign='center';ctx.fillStyle='#9bcb45';ctx.font='900 42px system-ui';
+      ctx.fillText(ended?'FIM DE JOGO':'DESAFIO DA ENTREGA',W/2,H/2-12);
+      ctx.fillStyle='#eaf5e9';ctx.font='22px system-ui';
+      ctx.fillText(ended?'Clique em RECOMEÇAR para tentar novamente':'Clique em INICIAR para jogar',W/2,H/2+32);
+    }
+  }
+  function hit(a,b) {
+    return Math.abs(a.x-b.x)<(a.w/2+b.w/2-8) && Math.abs(a.y-b.y)<(a.h/2+b.h/2-8);
+  }
+  function finish() {
+    running=false; ended=true;
+    if(score>best){best=score;bestEl.textContent=best;try{localStorage.setItem('jabdevArcadeBest',String(best));}catch(e){}}
+    draw();
+  }
+  function frame(t) {
+    if(!running)return;
+    const dt=Math.min((t-last)/1000,.035);last=t;
+    if(keys.left)player.x-=player.speed*dt;
+    if(keys.right)player.x+=player.speed*dt;
+    player.x=Math.max(32,Math.min(W-32,player.x));
+    spawn-=dt;
+    if(spawn<=0){
+      const size=42+Math.random()*24;
+      obstacles.push({x:45+Math.random()*(W-90),y:-45,w:size,h:size,speed:210+Math.min(score*2,260)});
+      spawn=Math.max(.34, .85-score*.004);
+    }
+    obstacles.forEach(o=>o.y+=o.speed*dt);
+    obstacles=obstacles.filter(o=>o.y<H+60);
+    const box={x:player.x,y:player.y,w:player.w,h:player.h};
+    if(obstacles.some(o=>hit(box,o))){finish();return;}
+    score+=dt*10;scoreEl.textContent=Math.floor(score);
+    draw();raf=requestAnimationFrame(frame);
+  }
+  function start(){
+    if(running)return;
+    if(ended)reset();
+    running=true;last=performance.now();startBtn.textContent='▶ EM ANDAMENTO';
+    cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);
+  }
+  function stopKeys(){keys.left=false;keys.right=false;}
+  document.addEventListener('keydown',e=>{
+    if(['ArrowLeft','ArrowRight','a','A','d','D',' '].includes(e.key))e.preventDefault();
+    if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=true;
+    if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=true;
+    if(e.key===' '&&!running)start();
+  });
+  document.addEventListener('keyup',e=>{
+    if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=false;
+    if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=false;
+  });
+  window.addEventListener('blur',stopKeys);
+  function holdButton(id,dir){
+    const el=document.getElementById(id);
+    const on=e=>{e.preventDefault();keys[dir]=true;};
+    const off=()=>keys[dir]=false;
+    el.addEventListener('pointerdown',on);
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,off));
+  }
+  holdButton('left','left');holdButton('right','right');
+  startBtn.addEventListener('click',start);
+  restartBtn.addEventListener('click',()=>{cancelAnimationFrame(raf);stopKeys();reset();startBtn.textContent='▶ INICIAR';});
+  reset();
+})();
+</script>
+</body>
+</html>

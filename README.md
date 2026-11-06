@@ -13,10 +13,6 @@
 
 <div align="center">
 
-<img src="assets/jabdev-logo.png" width="380" alt="JABDEV - Refrigerantes Jaboti"/>
-
-<br/>
-
 # JABDEV
 
 ### SOFTWARE ENGINEERING
@@ -34,6 +30,14 @@
 <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=17&pause=1800&color=9BCB45&center=true&vCenter=true&width=650&lines=Engineering+ideas+into+solutions.;Technology+driving+business+evolution.;Building+the+digital+future+of+Jaboti." alt="JABDEV"/>
 
 <br/><br/>
+
+<p>
+  <a href="#01-engineering">Engineering</a> •
+  <a href="#02-technology-stack">Stack</a> •
+  <a href="#03-digital-ecosystem">Ecossistema</a> •
+  <a href="#04-github-stats">Stats</a> •
+  <a href="#05-jabdev-arcade">🎮 Arcade</a>
+</p>
 
 </div>
 
@@ -194,3 +198,69 @@ flowchart TB
     class K result
 
     style TECH fill:#0B241A,stroke:#087A45,stroke-width:2px,color:#9BCB45
+    style BUSINESS fill:#F4FAEE,stroke:#78AD42,stroke-width:2px,color:#164B2C
+```
+
+---
+
+<!-- ===================== STATS ===================== -->
+
+# 04. GITHUB STATS
+
+### Atividade e linguagens, atualizadas diariamente.
+
+<div align="center">
+
+<img src="images/userstats.svg" alt="Estatísticas de nerdGG094" width="100%"/>
+
+<sub>Gerado automaticamente todos os dias pelo workflow <code>GitHub Stats</code>.</sub>
+
+</div>
+
+---
+
+<!-- ===================== ARCADE ===================== -->
+
+# 05. JABDEV ARCADE
+
+### Faça uma pausa e desafie seus reflexos.
+
+<div align="center">
+
+<a href="https://nerdgg094.github.io/nerdGG094/arcade/">
+  <img src="images/arcade-preview.svg" alt="JABDEV Arcade: Desafio da Entrega" width="100%"/>
+</a>
+
+<br/><br/>
+
+<a href="https://nerdgg094.github.io/nerdGG094/arcade/">
+  <img src="https://img.shields.io/badge/%F0%9F%8E%AE%20JOGAR%20AGORA-DESAFIO%20DA%20ENTREGA-9BCB45?style=for-the-badge&labelColor=063D27"/>
+</a>
+
+</div>
+
+**Desafio da Entrega** é um mini game feito em HTML, CSS e JavaScript puro, sem bibliotecas externas. Conduza a garrafa da Jaboti e desvie das caixas que caem: quanto mais tempo sobreviver, maior a pontuação, e o recorde fica salvo no seu navegador.
+
+| CONTROLE | AÇÃO |
+|:---|:---|
+| ⌨️ **← → ou A / D** | Mover a garrafa |
+| ␣ **Espaço** | Iniciar a partida |
+| 📱 **Botões ◀ ▶** | Jogar pelo celular ou mouse |
+
+<sub>O código do jogo está em <a href="arcade/index.html"><code>arcade/index.html</code></a>.</sub>
+
+---
+
+<!-- ===================== FOOTER ===================== -->
+
+<div align="center">
+
+**JABDEV · SOFTWARE ENGINEERING**
+
+<sub>Refrigerantes Jaboti · Tecnologia que impulsiona a evolução.</sub>
+
+<br/><br/>
+
+<img src="https://komarev.com/ghpvc/?username=nerdGG094&color=087A45&style=for-the-badge&label=VISITAS"/>
+
+</div>
