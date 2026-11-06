@@ -211,7 +211,7 @@ flowchart TB
 <div align="center">
 
 <a href="https://nerdgg094.github.io/nerdGG094/arcade/">
-  <img src="images/arcade-preview.svg" alt="Jaboti Run: o mascote da Jaboti pulando garrafas PET" width="100%"/>
+  <img src="images/arcade-preview.svg" alt="Jaboti Run: o mascote da Jaboti correndo, pulando garrafas PET e coletando tampinhas" width="100%"/>
 </a>
 
 <br/><br/>
@@ -223,7 +223,7 @@ flowchart TB
 <br/><br/>
 
 <sub>
-<kbd>Espaço</kbd> / <kbd>↑</kbd> pular &nbsp;·&nbsp; <kbd>↓</kbd> abaixar &nbsp;·&nbsp; <kbd>P</kbd> pausa &nbsp;·&nbsp; 📱 toque para pular
+<kbd>Espaço</kbd> pular (2× = mortal duplo) &nbsp;·&nbsp; <kbd>↓</kbd> deslizar &nbsp;·&nbsp; 🟡 colete tampinhas &nbsp;·&nbsp; 🌙 ciclo dia e noite &nbsp;·&nbsp; 📱 toque para jogar
 </sub>
 
 </div>
