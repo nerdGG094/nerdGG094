@@ -96,7 +96,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
 
   // cenário ilustrado no Gemini (fundo magenta removido); se alguma imagem falhar, o desenho em código assume
   const SCENE = {};
-  ['montanhas', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira',
+  ['morros', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira',
    'lixeira-vermelha', 'lixeira-azul', 'lixeira-amarela', 'lixeira-verde'].forEach(n => {
     const i = new Image(); i.src = 'assets/cenario/' + n + '.webp'; SCENE[n] = i;
   });
@@ -954,7 +954,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
 
   function drawScenery() {
     glows.length = 0;
-    if (sc('montanhas') && sc('colinas') && sc('cerca')) { drawSceneryImg(); return; }
+    if (sc('morros') && sc('colinas') && sc('cerca')) { drawSceneryImg(); return; }
     // montanhas distantes
     ridge(.03, GROUND - 78, 42, 1 / 160, 1 / 77, D(mix('a9cbe2', 'c9a7b8', dusk), .75));
     ridge(.06, GROUND - 58, 34, 1 / 120, 1 / 55, D(mix('8fbbd4', 'b48f9d', dusk), .72));
@@ -1014,8 +1014,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
 
   function drawSceneryImg() {
     nightFilter(.55);
-    // montanhas
-    strip(SCENE.montanhas, .03, GROUND - 190, 150);
+    // morros gramados do interior de SP
+    strip(SCENE.morros, .04, GROUND - 150, 115, false);
     // fábrica Jaboti ao longe
     const fab = sc('fabrica'), fo = dist * .1, tile = 1250;
     if (fab) for (let k = Math.floor(fo / tile) - 1; k <= Math.floor((fo + W) / tile) + 1; k++) {
@@ -1043,8 +1043,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       const bx = k * btile + 330 + hash(k * 4.4) * 240 - bo, b = ((k % BRANDS.length) + BRANDS.length) % BRANDS.length;
       if (bx > -200 && bx < W + 20) out ? drawBillboardImg(out, bx, b) : drawBillboard(bx, b);
     }
-    // cerca com girassóis
-    strip(SCENE.cerca, .5, GROUND - 82, 88);
+    // cerca de pasto com alguns girassóis
+    strip(SCENE.cerca, .5, GROUND - 60, 62, false);
     // lixeiras da coleta seletiva
     const so = dist * .55;
     for (let k = Math.floor(so / 46) - 1; k <= Math.floor((so + W) / 46) + 1; k++) {
