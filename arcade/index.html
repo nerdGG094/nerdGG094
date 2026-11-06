@@ -99,7 +99,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
 
   // cenário ilustrado no Gemini (fundo magenta removido); se alguma imagem falhar, o desenho em código assume
   const SCENE = {};
-  ['palete', 'fardos', 'paleteira', 'cone', 'morros', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira', 'braco',
+  ['palete', 'fardos', 'paleteira', 'cone', 'morros', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira', 'braco', 'rua', 'alambrado',
    'lixeira-vermelha', 'lixeira-azul', 'lixeira-amarela', 'lixeira-verde'].forEach(n => {
     const i = new Image(); i.src = 'assets/cenario/' + n + '.webp'; SCENE[n] = i;
   });
@@ -1124,8 +1124,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   function drawBillboardImg(im, x, i) {
     const s = .5, w = im.naturalWidth * s, h = im.naturalHeight * s, top = GROUND - 26 - h;
     ctx.drawImage(N(im), x, top, w, h);
-    // área branca da placa na imagem: (30,13)–(288,157)
-    const bx = x + 30 * s, by = top + 13 * s, bw = 258 * s, bh = 144 * s;
+    // área branca da placa na imagem: (23,32)–(281,152)
+    const bx = x + 25 * s, by = top + 33 * s, bw = 255 * s, bh = 118 * s;
     const c = boardCanvas(i);
     if (c) ctx.drawImage(c, bx, by, bw, bh);
     if (dark > .05) { ctx.fillStyle = `rgba(19,28,58,${dark * .45})`; ctx.fillRect(bx, by, bw, bh); }
@@ -1222,15 +1222,9 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       const bx = k * btile + 330 + hash(k * 4.4) * 240 - bo, b = ((k % BRANDS.length) + BRANDS.length) % BRANDS.length;
       if (bx > -200 && bx < W + 20) out ? drawBillboardImg(out, bx, b) : drawBillboard(bx, b);
     }
-    // cerca de pasto com alguns girassóis
-    strip(SCENE.cerca, .5, GROUND - 60, 62, false);
-    // lixeiras da coleta seletiva
-    const so = dist * .55;
-    for (let k = Math.floor(so / 46) - 1; k <= Math.floor((so + W) / 46) + 1; k++) {
-      if (hash(k * 4.7) <= .93) continue;
-      const im = sc(BIN_IMGS[Math.floor(hash(k * 2.2) * 4)]);
-      if (im) { const x = k * 46 + hash(k * 8.1) * 20 - so, h = 40, w = im.naturalWidth * h / im.naturalHeight; ctx.drawImage(N(im), x, GROUND - h + 2, w, h); }
-    }
+    // alambrado na beira da rua (cerca de pasto antiga como reserva)
+    if (sc('alambrado')) strip(SCENE.alambrado, .8, GROUND - 76, 66, false);
+    else strip(SCENE.cerca, .5, GROUND - 60, 62, false);
       }
 
   function drawGround() {
@@ -1239,7 +1233,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       nightFilter(.5);
       const g = ctx.createLinearGradient(0, GROUND, 0, H); g.addColorStop(0, '#c9a36c'); g.addColorStop(1, '#a37845');
       ctx.fillStyle = g; ctx.fillRect(0, GROUND, W, H - GROUND);
-      strip(chao, 1, GROUND - 24, 96);
+      if (sc('rua')) strip(SCENE.rua, 1, GROUND - 18, 92, false);   // guia com luzes + calçada
+      else strip(chao, 1, GROUND - 24, 96);
             return;
     }
     const off = dist % 48;
@@ -1451,14 +1446,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     const im = sc('engradado');
     if (!im) { drawCrate(o); return; }
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, GROUND + 2, o.w * .6, 5, 0, 0, TAU); ctx.fill();
-    if (!o.flavors) o.flavors = Array.from({ length: o.cols * 4 }, () => pick(FLAVORS));
     for (let r = 0; r < o.rows; r++) for (let c = 0; c < o.cols; c++) {
       const x = o.x + c * CRATE_W, y = GROUND - (r + 1) * CRATE_H + r * 4;
-      if (r === o.rows - 1) for (let i = 0; i < 4; i++) {
-        const f = o.flavors[c * 4 + i], bx = x + 8 + i * 13;
-        ctx.fillStyle = mix(f.liquid, 'ffffff', .15); ctx.fillRect(bx, y - 8, 7, 16);
-        ctx.fillStyle = '#' + f.cap; ctx.fillRect(bx - 1, y - 12, 9, 5);
-      }
       ctx.drawImage(im, x, y, CRATE_W, CRATE_H);
     }
   }
