@@ -1430,7 +1430,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   }
   // lata especial: raios dourados girando atrás e a lata girando no próprio eixo
   const LATA_IMG = new Image(); LATA_IMG.src = 'assets/lata.webp';
-  const LATA_FRAMES = 8;
+  const LATA_FRAMES = 1;
   function drawLata(it) {
     const bob = Math.sin(it.ph * 2) * 6, y = it.y + bob;
     ctx.save(); ctx.translate(it.x, y);
@@ -1446,10 +1446,12 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     gl.addColorStop(0, 'rgba(255,240,170,.8)'); gl.addColorStop(1, 'rgba(255,220,90,0)');
     ctx.fillStyle = gl; ctx.fillRect(-44, -44, 88, 88);
     if (ok(LATA_IMG)) {
-      // folha com 8 quadros da lata girando, lado a lado
+      // lata de frente (ilustração do Gemini) girando: a largura achata e estica
       const fw = LATA_IMG.naturalWidth / LATA_FRAMES, fh = LATA_IMG.naturalHeight, f = Math.floor(it.ph * 3) % LATA_FRAMES;
-      const h = 54, w = fw * h / fh;
+      const h = 58, w = fw * h / fh, c = Math.cos(it.ph * 1.5);
+      ctx.scale(Math.max(.18, Math.abs(c)), 1);
       ctx.drawImage(LATA_IMG, f * fw, 0, fw, fh, -w / 2, -h / 2, w, h);
+      if (c < 0) { ctx.fillStyle = 'rgba(10,50,25,.35)'; ctx.fillRect(-w / 2, -h / 2 + 3, w, h - 6); }   // lado de trás mais escuro
     } else {
       // lata desenhada enquanto a ilustração não chega
       const sx = Math.max(.25, Math.abs(Math.cos(it.ph * 1.5)));
@@ -1465,7 +1467,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(-10, -20, 3, 38);
     }
     ctx.restore();
-    if (Math.random() < .2) particles.push({ type: 'spark', x: it.x + (Math.random() - .5) * 40, y: y + (Math.random() - .5) * 50, vx: 0, vy: -30, life: .6, max: .6, r: 2 + Math.random() * 2, color: '#ffe680' });
+    if (state === 'running' && Math.random() < .2) particles.push({ type: 'spark', x: it.x + (Math.random() - .5) * 40, y: y + (Math.random() - .5) * 50, vx: 0, vy: -30, life: .6, max: .6, r: 2 + Math.random() * 2, color: '#ffe680' });
   }
   // garrafa de poder flutuando, com brilho na cor do poder
   function drawItem(it) {
@@ -1481,7 +1483,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.translate(it.x, y); ctx.rotate(Math.sin(it.ph) * .12);
     if (!drawBottleArt(it.flavor, false, 0, 32, 64)) ctx.drawImage(bottleSprite(it.flavor, 24, 58), -14, -31, 28, 62);
     ctx.restore();
-    if (Math.random() < .08) particles.push({ type: 'spark', x: it.x + (Math.random() - .5) * 30, y: y + (Math.random() - .5) * 50, vx: 0, vy: -20, life: .5, max: .5, r: 1.5 + Math.random() * 1.5, color: '#ffffff' });
+    if (state === 'running' && Math.random() < .08) particles.push({ type: 'spark', x: it.x + (Math.random() - .5) * 30, y: y + (Math.random() - .5) * 50, vx: 0, vy: -20, life: .5, max: .5, r: 1.5 + Math.random() * 1.5, color: '#ffffff' });
   }
   function drawCan(o) {
     ctx.save();
@@ -1573,7 +1575,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       }
     }
     // pulo triplo: brilho verde nos tênis
-    if (skills.pulo > 0 && Math.random() < .3) particles.push({ type: 'spark', x: PX + (Math.random() - .5) * 30, y: GROUND - player.y - 4, vx: (Math.random() - .5) * 40, vy: 30, life: .4, max: .4, r: 2, color: '#b8f06a' });
+    if (skills.pulo > 0 && state === 'running' && Math.random() < .3) particles.push({ type: 'spark', x: PX + (Math.random() - .5) * 30, y: GROUND - player.y - 4, vx: (Math.random() - .5) * 40, vy: 30, life: .4, max: .4, r: 2, color: '#b8f06a' });
   }
   function drawSkillHud(ink) {
     let y = 50;
