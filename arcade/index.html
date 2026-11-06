@@ -99,7 +99,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
 
   // cenário ilustrado no Gemini (fundo magenta removido); se alguma imagem falhar, o desenho em código assume
   const SCENE = {};
-  ['palete', 'fardos', 'paleteira', 'cone', 'morros', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira',
+  ['palete', 'fardos', 'paleteira', 'cone', 'morros', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira', 'braco',
    'lixeira-vermelha', 'lixeira-azul', 'lixeira-amarela', 'lixeira-verde'].forEach(n => {
     const i = new Image(); i.src = 'assets/cenario/' + n + '.webp'; SCENE[n] = i;
   });
@@ -1465,6 +1465,15 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   function drawHang(o) {
     const im = sc('engradado'), cx = o.x + o.w / 2, ch = CRATE_H;
     const top = o.bottom - o.rows * ch + (o.rows - 1) * 4;
+    const arm = sc('braco');
+    if (arm) {
+      // braço robótico vindo do teto: engradados da arte (centro x 77, base y 382 em 150×384) alinhados ao hitbox
+      const s = .5, ay = o.bottom - 382;
+      ctx.save();
+      ctx.translate(cx, ay); ctx.rotate(Math.sin(t * 2 + o.sway) * .02); ctx.translate(-cx, -ay);
+      ctx.drawImage(N(arm), cx - 77, ay + Math.sin(t * 3 + o.sway) * 1.5, arm.width * s, arm.height * s);
+      ctx.restore();
+    } else {
     ctx.save();
     ctx.translate(cx, -10); ctx.rotate(Math.sin(t * 2 + o.sway) * .035); ctx.translate(-cx, 10);
     // cordas e gancho
@@ -1481,6 +1490,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       else { ctx.fillStyle = '#c3242a'; rr(o.x, y, o.w, ch - 2, 6); ctx.fill(); }
     }
     ctx.restore();
+    }
     // sombra no chão e aviso de deslizar
     ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.beginPath(); ctx.ellipse(cx, GROUND + 2, o.w * .5, 4, 0, 0, TAU); ctx.fill();
     if (o.x > PX + 60 && state === 'running' && Math.floor(t * 4) % 2) {
