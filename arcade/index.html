@@ -99,7 +99,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
 
   // cenário ilustrado no Gemini (fundo magenta removido); se alguma imagem falhar, o desenho em código assume
   const SCENE = {};
-  ['morros', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira',
+  ['palete', 'fardos', 'paleteira', 'cone', 'morros', 'colinas', 'fabrica', 'outdoor', 'cerca', 'chao', 'grama', 'engradado', 'latinha', 'tampinha-gira',
    'lixeira-vermelha', 'lixeira-azul', 'lixeira-amarela', 'lixeira-verde'].forEach(n => {
     const i = new Image(); i.src = 'assets/cenario/' + n + '.webp'; SCENE[n] = i;
   });
@@ -290,14 +290,37 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   const mult = () => skills.dobro > 0 ? 2 : 1;
 
   const CRATE_W = 64, CRATE_H = CRATE_W * 90 / 129;
+  // peças da fábrica: largura na tela e áreas de colisão [x, largura, altura] a partir do chão
+  const PROPS = {
+    palete:    { w: 92, hit: [[6, 80, 28]] },
+    cone:      { w: 36, hit: [[8, 20, 40]] },
+    paleteira: { w: 96, hit: [[2, 88, 20], [64, 22, 62]] },
+    fardos:    { w: 78, hit: [[4, 70, 84]] }
+  };
+  function addProp(name, x0) {
+    const P = PROPS[name];
+    obstacles.push({ kind: 'prop', name, x: x0, w: P.w, h: Math.max(...P.hit.map(r => r[2])), hit: P.hit });
+    return P.w;
+  }
   function spawn() {
     const r = Math.random(), x0 = W + 40;
     let w;
-    if (score > 100 && r < .16) {
+    if (score > 100 && r < .14) {
       // engradados pendurados por corda: só passa deslizando por baixo
       obstacles.push({ kind: 'hang', x: x0, w: CRATE_W, bottom: GROUND - 64, rows: 2, sway: Math.random() * TAU });
       w = CRATE_W;
-    } else if (r < .42) {
+    } else if (r < .42 && r >= .28) {
+      // cone ou palete vazio
+      w = addProp(Math.random() < .5 ? 'cone' : 'palete', x0);
+      if (Math.random() < .45) coinArc(x0 + w / 2, 4, 50 + w, 100, 60);
+    } else if (score > 120 && r >= .42 && r < .54) {
+      w = addProp('paleteira', x0);
+      if (Math.random() < .5) coinArc(x0 + w / 2, 5, 60 + w, 110, 70);
+    } else if (score > 250 && r >= .54 && r < .66) {
+      // palete com fardos: alto, pede pulo segurado ou pulo duplo
+      w = addProp('fardos', x0);
+      if (Math.random() < .55) coinArc(x0 + w / 2, 5, 70 + w, 150, 70);
+    } else if (r < .28) {
       // lixeira da coleta seletiva
       const img = pick(BIN_IMGS), h = 46;
       obstacles.push({ kind: 'bin', x: x0, w: 50, h, img });
@@ -307,9 +330,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       // engradados: sozinho, lado a lado ou empilhados
       let cols = 1, rows = 1;
       const q = Math.random();
-      if (score > 80 && q < .3) cols = 2;
-      else if (score > 220 && q < .5) rows = 2;
-      else if (score > 450 && q < .6) { cols = 2; rows = 2; }
+      if (score > 80 && q < .35) cols = 2;
       w = cols * CRATE_W;
       const h = rows * CRATE_H - (rows - 1) * 4;
       obstacles.push({ kind: 'crate', x: x0, w, h, cols, rows });
@@ -343,7 +364,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   function smash(o) {
     o.dead = true; shake = Math.max(shake, 6);
     const cx = o.kind === 'can' ? o.x : o.x + o.w / 2, cy = o.kind === 'can' ? o.y : o.kind === 'hang' ? o.bottom - 40 : GROUND - (o.h || 40) / 2;
-    const cols = o.kind === 'crate' ? ['#d7262b', '#a8131a', '#ff5a4f'] : o.kind === 'can' ? ['#c9ced3', '#ffffff', '#d7262b'] : ['#2aa555', '#2a6fd1', '#f2b705', '#d7262b'];
+    const cols = o.kind === 'prop' ? ['#b07a44', '#8a5a2c', '#ffc21a', '#ff7a1a'] : o.kind === 'crate' ? ['#d7262b', '#a8131a', '#ff5a4f'] : o.kind === 'can' ? ['#c9ced3', '#ffffff', '#d7262b'] : ['#2aa555', '#2a6fd1', '#f2b705', '#d7262b'];
     for (let i = 0; i < 18; i++) particles.push({ type: 'confetti', x: cx, y: cy, vx: 120 + Math.random() * 380, vy: -120 - Math.random() * 320, life: .9, max: .9, r: 3 + Math.random() * 4, rot: Math.random() * TAU, vr: (Math.random() - .5) * 20, color: cols[i % cols.length] });
     bonus += 15 * mult(); popText(cx, cy - 30, '+' + 15 * mult(), '#ffffff'); sfx.smash();
   }
@@ -377,6 +398,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     return { x1: PX - 22, x2: PX + 24, y1: GROUND - player.y - h, y2: GROUND - player.y - 3 };
   }
   function hits(o, p) {
+    if (o.kind === 'prop') return o.hit.some(([hx, hw, hh]) => p.x2 > o.x + hx && p.x1 < o.x + hx + hw && p.y2 > GROUND - hh);
     if (o.kind === 'hang') return p.x2 > o.x + 6 && p.x1 < o.x + o.w - 6 && p.y1 < o.bottom;
     if (o.kind === 'can') {
       const cx = clamp(o.x, p.x1, p.x2), cy = clamp(o.y, p.y1, p.y2);
@@ -1027,21 +1049,37 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   }
 
   // escurece as imagens à noite
-  function nightFilter(k = .6) {
-    ctx.filter = dark > .02 ? `brightness(${1 - dark * k}) saturate(${1 - dark * .35})` : 'none';
+  // à noite cada imagem é escurecida uma vez por nível (0–10) e guardada; nada de filtro a cada quadro
+  let nightK = .6;
+  const nightCache = new Map();
+  function nightFilter(k = .6) { nightK = k; }
+  function N(im) {
+    const lvl = Math.round(dark * 10);
+    if (!lvl) return im;
+    const key = im.src + '|' + lvl + '|' + nightK;
+    let c = nightCache.get(key);
+    if (!c) {
+      c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const g = c.getContext('2d');
+      g.drawImage(im, 0, 0);
+      g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = `rgba(19,28,58,${lvl / 10 * nightK})`; g.fillRect(0, 0, c.width, c.height);
+      nightCache.set(key, c);
+    }
+    return c;
   }
   // repete uma faixa horizontal; cópias alternadas são espelhadas para esconder a emenda
   function strip(im, factor, y, h, mirror = true, offset = 0) {
-    const w = im.naturalWidth * h / im.naturalHeight, o = dist * factor + offset;
+    const w = im.naturalWidth * h / im.naturalHeight, o = dist * factor + offset, src = N(im);
     for (let k = Math.floor(o / w); k * w - o < W; k++) {
       const x = k * w - o;
-      if (mirror && k % 2) { ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(im, 0, 0, w + .5, h); ctx.restore(); }
-      else ctx.drawImage(im, x, y, w + .5, h);
+      if (mirror && k % 2) { ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(src, 0, 0, w + .5, h); ctx.restore(); }
+      else ctx.drawImage(src, x, y, w + .5, h);
     }
   }
   function drawFactoryImg(im, x, base) {
     const s = .4, w = im.naturalWidth * s, h = im.naturalHeight * s;
-    ctx.drawImage(im, x, base - h, w, h);
+    ctx.drawImage(N(im), x, base - h, w, h);
     const logo = IMG['logo-jaboti'];
     if (ok(logo)) {
       const lw = 88 * s, lh = lw * logo.naturalHeight / logo.naturalWidth, lx = x + 638 * s, ly = base - h + 74 * s;
@@ -1051,11 +1089,11 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   }
   function drawBillboardImg(im, x, i) {
     const s = .5, w = im.naturalWidth * s, h = im.naturalHeight * s, top = GROUND - 26 - h;
-    ctx.drawImage(im, x, top, w, h);
+    ctx.drawImage(N(im), x, top, w, h);
     // área branca da placa na imagem: (30,13)–(288,157)
     const bx = x + 30 * s, by = top + 13 * s, bw = 258 * s, bh = 144 * s;
     const c = boardCanvas(i);
-    if (c) { ctx.save(); ctx.filter = 'none'; ctx.drawImage(c, bx, by, bw, bh); ctx.restore(); nightFilter(); }
+    if (c) ctx.drawImage(c, bx, by, bw, bh);
     if (dark > .05) { ctx.fillStyle = `rgba(19,28,58,${dark * .45})`; ctx.fillRect(bx, by, bw, bh); }
     if (dark > .2) glows.push(['board', bx, by, bw, bh, c]);
   }
@@ -1133,8 +1171,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     }
     // colinas com árvores
     strip(SCENE.colinas, .2, GROUND - 108, 70);
-    ctx.filter = 'none';
-
+    
     // pássaros
     if (dark < .6) {
       ctx.strokeStyle = D('2b3a3f'); ctx.lineWidth = 2; ctx.lineCap = 'round';
@@ -1158,10 +1195,9 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     for (let k = Math.floor(so / 46) - 1; k <= Math.floor((so + W) / 46) + 1; k++) {
       if (hash(k * 4.7) <= .93) continue;
       const im = sc(BIN_IMGS[Math.floor(hash(k * 2.2) * 4)]);
-      if (im) { const x = k * 46 + hash(k * 8.1) * 20 - so, h = 40, w = im.naturalWidth * h / im.naturalHeight; ctx.drawImage(im, x, GROUND - h + 2, w, h); }
+      if (im) { const x = k * 46 + hash(k * 8.1) * 20 - so, h = 40, w = im.naturalWidth * h / im.naturalHeight; ctx.drawImage(N(im), x, GROUND - h + 2, w, h); }
     }
-    ctx.filter = 'none';
-  }
+      }
 
   function drawGround() {
     const chao = sc('chao');
@@ -1170,8 +1206,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       const g = ctx.createLinearGradient(0, GROUND, 0, H); g.addColorStop(0, '#c9a36c'); g.addColorStop(1, '#a37845');
       ctx.fillStyle = g; ctx.fillRect(0, GROUND, W, H - GROUND);
       strip(chao, 1, GROUND - 24, 96);
-      ctx.filter = 'none';
-      return;
+            return;
     }
     const off = dist % 48;
     // grama
@@ -1204,10 +1239,9 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       for (let k = Math.floor(fo / 70) - 1; k <= Math.floor((fo + W) / 70) + 1; k++) {
         if (hash(k * 2.3) < .5) continue;
         const x = k * 70 + hash(k * 7.7) * 30 - fo, h = 26 + hash(k * 3.1) * 16, w = tuft.naturalWidth * h / tuft.naturalHeight;
-        ctx.drawImage(tuft, x, H - h + 6, w, h);
+        ctx.drawImage(N(tuft), x, H - h + 6, w, h);
       }
-      ctx.filter = 'none';
-      return;
+            return;
     }
     for (let k = Math.floor(fo / 70) - 1; k <= Math.floor((fo + W) / 70) + 1; k++) {
       if (hash(k * 2.3) < .5) continue;
@@ -1421,6 +1455,13 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       ctx.strokeText('↓', cx, o.bottom + 20); ctx.fillText('↓', cx, o.bottom + 20);
     }
   }
+  function drawProp(o) {
+    const im = sc(o.name);
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, GROUND + 2, o.w * .55, 4, 0, 0, TAU); ctx.fill();
+    if (!im) { ctx.fillStyle = '#b07a44'; ctx.fillRect(o.x, GROUND - o.h, o.w, o.h); return; }
+    const h = o.w * im.naturalHeight / im.naturalWidth;
+    ctx.drawImage(im, o.x, GROUND - h + 3, o.w, h);
+  }
   function drawBinObs(o) {
     const im = sc(o.img);
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, GROUND + 2, o.w * .55, 4, 0, 0, TAU); ctx.fill();
@@ -1633,7 +1674,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     drawScenery();
     drawGround();
     coins.forEach(drawCoin);
-    obstacles.forEach(o => o.kind === 'can' ? drawCan(o) : o.kind === 'crate' ? drawCrates(o) : o.kind === 'bin' ? drawBinObs(o) : o.kind === 'hang' ? drawHang(o) : drawBottle(o));
+    obstacles.forEach(o => o.kind === 'can' ? drawCan(o) : o.kind === 'crate' ? drawCrates(o) : o.kind === 'bin' ? drawBinObs(o) : o.kind === 'hang' ? drawHang(o) : o.kind === 'prop' ? drawProp(o) : drawBottle(o));
     items.forEach(drawItem);
     drawParticles();
     drawPlayerFx();
@@ -1651,7 +1692,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     drawHud();
     if (state === 'ready') card('JABOTI RUN', [
       ['Toque ou aperte Espaço para começar', '#eaf5e9', 18],
-      ['Pule os engradados · deslize sob os pendurados', '#a8c4b1'],
+      ['Pule paletes, cones e engradados · deslize sob os pendurados', '#a8c4b1'],
       ['Pegue as garrafas Jaboti para ganhar poderes!', '#ffd23a']
     ]);
     if (state === 'paused') card('PAUSADO', [['Aperte P ou toque para continuar', '#eaf5e9', 18]]);
