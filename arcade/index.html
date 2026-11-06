@@ -673,10 +673,13 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     if (useVector || !ok(SPRITES)) { drawMascotVector(); return; }
     const P = pose, k = SP.scale, dead = state === 'dying' || state === 'over';
     const spinRot = player.spin >= 0 ? (1 - (1 - player.spin) ** 2) * TAU : 0;
-    const rot = (dead ? player.rotDead : P.rot * .6) + spinRot;
     const ps = activeSheet(), cell = ps ? POWER_CELL : SP, sheet = ps ? ps.img : SPRITES;
+    // com poder, o mascote quica e balança no ritmo da passada (as folhas de poder variam pouco entre quadros)
+    const stride = ps && state === 'running' && player.ground && !player.slide;
+    const bounce = stride ? Math.abs(Math.sin(runPhase)) * 5 : 0, sway = stride ? Math.sin(runPhase) * .06 : 0;
+    const rot = (dead ? player.rotDead : P.rot * .6) + spinRot + sway;
     const f = spriteFrame(ps ? ps.map : SP), sx = (f % 8) * cell.size, sy = Math.floor(f / 8) * cell.size;
-    const ox = PX + player.dx, oy = GROUND - player.y + player.drop * .7;
+    const ox = PX + player.dx, oy = GROUND - player.y + player.drop * .7 - bounce;
     const mid = cell.bodyMid * k;
 
     // sombra
