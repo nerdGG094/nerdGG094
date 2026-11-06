@@ -41,9 +41,10 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     </div>
     <p class="help">
       <kbd>Espaço</kbd> / <kbd>↑</kbd> pular (segure para ir mais alto) · aperte de novo no ar para dar um <b>mortal duplo</b><br>
-      <kbd>↓</kbd> deslizar sob as latinhas · colete as <b>tampinhas douradas</b> · <kbd>P</kbd> pausa · <kbd>M</kbd> som<br>
+      <kbd>↓</kbd> deslizar · colete as <b>tampinhas douradas</b> · <kbd>P</kbd> pausa · <kbd>M</kbd> som<br>
       <b>Garrafas dão poderes:</b> Guaraná = turbo · Cola = escudo · Laranja/Abacaxi = ímã de tampinhas ·
       Limão/Maçã = pulo triplo · Uva = câmera lenta · Tubaína = pontos em dobro<br>
+      <b>Lata especial</b> (rara): turbo + ímã + pontos em dobro ao mesmo tempo!<br>
       No celular: toque na tela para pular, toque de novo no ar para o pulo duplo.
     </p>
   </section>
@@ -172,7 +173,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   let player, pose, obstacles, coins, particles, texts, clouds, birds, stars, flies;
   let speed, dist, score, bonus, caps, gap, flash, shake, hitstop, newBest, runPhase, stepIndex, celebrate;
   let hold = false, duckHeld = false;
-  let skills, items, skillTimer, invuln, pts, vel;
+  let skills, items, skillTimer, lataTimer, invuln, pts, vel;
 
   const IDLE_POSE = {
     by: 0, rot: 0, sx: 1, sy: 1,
@@ -187,7 +188,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     obstacles = []; coins = []; particles = []; texts = [];
     speed = START_SPEED; dist = 0; score = 0; bonus = 0; caps = 0; gap = 600;
     flash = 0; shake = 0; hitstop = 0; newBest = false; runPhase = 0; stepIndex = 0; celebrate = 0;
-    skills = {}; items = []; skillTimer = 3.5; invuln = 0; pts = 0; vel = START_SPEED;
+    skills = {}; items = []; skillTimer = 3.5; lataTimer = 22 + Math.random() * 10; invuln = 0; pts = 0; vel = START_SPEED;
   }
   function initScenery() {
     clouds = Array.from({ length: 7 }, (_, i) => ({ x: i * 160 + Math.random() * 100, y: 26 + Math.random() * 90, s: .55 + Math.random() * .7 }));
@@ -210,9 +211,9 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   }
   function start() {
     reset(); state = 'running'; sfx.start();
-    // ?poder=turbo começa com um poder ativo (útil para testar)
+    // ?poder=turbo (ou lata) começa com um poder ativo (útil para testar)
     const q = new URLSearchParams(location.search).get('poder');
-    if (q && SKILLS[q]) activate(q, PX, GROUND - 60);
+    if (q && (SKILLS[q] || q === 'lata')) activate(q, PX, GROUND - 60);
   }
   function togglePause() {
     if (state === 'running') state = 'paused';
@@ -282,6 +283,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     lento:  { label: 'CÂMERA LENTA', short: 'LENTO', dur: 5, color: '#b07ae0', flavors: ['Uva'] },
     dobro:  { label: 'PONTOS x2', short: 'x2', dur: 10, color: '#ff6a5f', flavors: ['Tubaína'] }
   };
+  // lata especial: rara, liga turbo + ímã + pontos em dobro ao mesmo tempo
+  const LATA = { label: 'LATA ESPECIAL!', dur: 6, color: '#ffd23a', combo: ['turbo', 'ima', 'dobro'] };
   const SKILL_KEYS = Object.keys(SKILLS);
   const flavorByName = n => FLAVORS.find(f => f.name === n);
   const mult = () => skills.dobro > 0 ? 2 : 1;
@@ -290,13 +293,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   function spawn() {
     const r = Math.random(), x0 = W + 40;
     let w;
-    if (score > 120 && r < .2) {
-      // latinha voando: baixa (pular) ou alta (deslizar)
-      const high = Math.random() < .5;
-      obstacles.push({ kind: 'can', x: x0, y: high ? GROUND - 92 : GROUND - 30, r: 16, spin: 0, wob: Math.random() * TAU });
-      w = 34;
-      if (!high && Math.random() < .5) coinArc(x0 + 16, 3, 50, 70, 70);
-    } else if (r < .42) {
+    if (r < .3) {
       // lixeira da coleta seletiva
       const img = pick(BIN_IMGS), h = 46;
       obstacles.push({ kind: 'bin', x: x0, w: 50, h, img });
@@ -321,7 +318,18 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     const key = pick(SKILL_KEYS), f = flavorByName(pick(SKILLS[key].flavors));
     items.push({ x: W + 60, y: GROUND - 70 - Math.random() * 80, skill: key, flavor: f, ph: Math.random() * TAU });
   }
+  function spawnLata() {
+    items.push({ x: W + 60, y: GROUND - 90 - Math.random() * 70, skill: 'lata', ph: 0 });
+  }
   function activate(key, x, y) {
+    if (key === 'lata') {
+      LATA.combo.forEach(k => { skills[k] = Math.max(skills[k] || 0, LATA.dur); });
+      sfx.power(); setTimeout(() => sfx.milestone(), 180);
+      ring(x, y, LATA.color); ring(x, y, '#ffffff'); sparkle(x, y, 28, LATA.color); confetti(x, y, 26);
+      popText(PX + 50, GROUND - player.y - 120, LATA.label, LATA.color);
+      flash = Math.max(flash, .6); shake = Math.max(shake, 5);
+      return;
+    }
     const sk = SKILLS[key];
     skills[key] = sk.dur;
     sfx.power(); ring(x, y, sk.color); sparkle(x, y, 16, sk.color);
@@ -466,6 +474,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       // garrafas de poder aparecem nos espaços livres entre obstáculos
       skillTimer -= dt;
       if (skillTimer <= 0 && gap > 280) { spawnSkill(); skillTimer = 6 + Math.random() * 5; }
+      lataTimer -= dt;
+      if (lataTimer <= 0 && gap > 280) { spawnLata(); lataTimer = 25 + Math.random() * 15; skillTimer = Math.max(skillTimer, 3); }
       if (skills.turbo > 0 && Math.random() < .7) particles.push({ type: 'spark', x: PX - 20, y: GROUND - player.y - 20 - Math.random() * 60, vx: -300 - Math.random() * 200, vy: (Math.random() - .5) * 40, life: .35, max: .35, r: 2 + Math.random() * 2, color: Math.random() < .5 ? '#ffd23a' : '#ff8a3a' });
 
       const box = playerBox();
@@ -1386,8 +1396,48 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     const h = o.h + 8, w = im.naturalWidth * h / im.naturalHeight;
     ctx.drawImage(im, o.x + o.w / 2 - w / 2, GROUND - h + 4, w, h);
   }
+  // lata especial: raios dourados girando atrás e a lata girando no próprio eixo
+  const LATA_IMG = new Image(); LATA_IMG.src = 'assets/lata.webp';
+  const LATA_FRAMES = 8;
+  function drawLata(it) {
+    const bob = Math.sin(it.ph * 2) * 6, y = it.y + bob;
+    ctx.save(); ctx.translate(it.x, y);
+    ctx.save(); ctx.rotate(it.ph * .8);
+    for (let i = 0; i < 12; i++) {
+      ctx.rotate(TAU / 12);
+      const g = ctx.createLinearGradient(0, 0, 0, -58);
+      g.addColorStop(0, 'rgba(255,215,80,.55)'); g.addColorStop(1, 'rgba(255,215,80,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(0, -58); ctx.lineTo(5, 0); ctx.fill();
+    }
+    ctx.restore();
+    const gl = ctx.createRadialGradient(0, 0, 4, 0, 0, 44);
+    gl.addColorStop(0, 'rgba(255,240,170,.8)'); gl.addColorStop(1, 'rgba(255,220,90,0)');
+    ctx.fillStyle = gl; ctx.fillRect(-44, -44, 88, 88);
+    if (ok(LATA_IMG)) {
+      // folha com 8 quadros da lata girando, lado a lado
+      const fw = LATA_IMG.naturalWidth / LATA_FRAMES, fh = LATA_IMG.naturalHeight, f = Math.floor(it.ph * 3) % LATA_FRAMES;
+      const h = 54, w = fw * h / fh;
+      ctx.drawImage(LATA_IMG, f * fw, 0, fw, fh, -w / 2, -h / 2, w, h);
+    } else {
+      // lata desenhada enquanto a ilustração não chega
+      const sx = Math.max(.25, Math.abs(Math.cos(it.ph * 1.5)));
+      ctx.scale(sx, 1);
+      const g = ctx.createLinearGradient(-15, 0, 15, 0);
+      g.addColorStop(0, '#0f5a30'); g.addColorStop(.4, '#2fae5a'); g.addColorStop(1, '#0b4424');
+      ctx.fillStyle = g; rr(-15, -24, 30, 48, 6); ctx.fill();
+      ctx.fillStyle = '#c9ced3'; rr(-13, -27, 26, 6, 3); ctx.fill(); rr(-13, 21, 26, 6, 3); ctx.fill();
+      ctx.fillStyle = '#d7262b'; ctx.fillRect(-15, -8, 30, 14);
+      ctx.fillStyle = '#ffd23a'; ctx.font = 'italic 900 9px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('Jaboti', 0, -1);
+      ctx.fillStyle = '#ffd23a'; ctx.font = '900 8px system-ui,sans-serif'; ctx.fillText('58', 0, 14);
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(-10, -20, 3, 38);
+    }
+    ctx.restore();
+    if (Math.random() < .2) particles.push({ type: 'spark', x: it.x + (Math.random() - .5) * 40, y: y + (Math.random() - .5) * 50, vx: 0, vy: -30, life: .6, max: .6, r: 2 + Math.random() * 2, color: '#ffe680' });
+  }
   // garrafa de poder flutuando, com brilho na cor do poder
   function drawItem(it) {
+    if (it.skill === 'lata') { drawLata(it); return; }
     const sk = SKILLS[it.skill], bob = Math.sin(it.ph * 2) * 5, y = it.y + bob;
     ctx.save();
     const pulse = .75 + Math.sin(it.ph * 4) * .25;
@@ -1567,7 +1617,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     drawHud();
     if (state === 'ready') card('JABOTI RUN', [
       ['Toque ou aperte Espaço para começar', '#eaf5e9', 18],
-      ['Pule os engradados e lixeiras · deslize sob as latinhas', '#a8c4b1'],
+      ['Pule os engradados e as lixeiras', '#a8c4b1'],
       ['Pegue as garrafas Jaboti para ganhar poderes!', '#ffd23a']
     ]);
     if (state === 'paused') card('PAUSADO', [['Aperte P ou toque para continuar', '#eaf5e9', 18]]);
