@@ -86,15 +86,29 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   }
 
   // ================================================================
-  //  IMAGENS OFICIAIS (rótulos e logos do site da Jaboti)
+  //  LOGOS DAS MARCAS (mesmos arquivos do projeto Atlas)
   // ================================================================
   const IMG = {};
   const load = name => { const i = new Image(); i.src = 'assets/' + name + '.png'; IMG[name] = i; return i; };
   const ok = i => i && i.complete && i.naturalWidth > 0;
-  const FLAVORS_2L = ['2l-tubaina', '2l-jaboti-cola', '2l-jaboti-cola-zero', '2l-jaboti-abacaxi', '2l-jaboti-guarana', '2l-jaboti-guarana-zero', '2l-jaboti-limao', '2l-jaboti-maca', '2l-jaboti-uva', '2l-jaboti-laranja'];
-  const FLAVORS_600 = ['600-jaboti-cola', '600-jaboti-guarana', '600-jaboti-laranja', '600-jaboti-maca'];
-  [...FLAVORS_2L, ...FLAVORS_600, 'logo-jaboti', 'logo-frupic', 'logo-life', 'logo-skywalk', 'prod-frupic', 'prod-life', 'prod-skywalk'].forEach(load);
+  ['logo-jaboti', 'logo-frupic', 'logo-life', 'logo-skywalk'].forEach(load);
   const pick = a => a[Math.floor(Math.random() * a.length)];
+
+  // ================================================================
+  //  SABORES: rótulos desenhados com base nos rótulos originais
+  // ================================================================
+  const FLAVORS = [
+    { name: 'Guaraná', pet: 'green', liquid: 'b8741f', cap: '2f8a3a', label: '1d7a45', band: '0f5a30', logo: '#ffffff', edge: '#0f3a22', sub: '#d9ec7a' },
+    { name: 'Guaraná Zero', short: 'ZERO', pet: 'green', liquid: 'b8741f', cap: '222222', label: '1f5a3a', band: '123a26', logo: '#ffffff', edge: '#0b2a1a', sub: '#ffd23a' },
+    { name: 'Cola', pet: 'clear', liquid: '3a1410', cap: 'd21f26', label: 'd7262b', band: 'a3141a', logo: '#ffffff', edge: '#6e0a0f', sub: '#ffffff' },
+    { name: 'Cola Zero', short: 'zero', pet: 'clear', liquid: '3a1410', cap: '222222', label: '151515', band: '2a2a2a', logo: '#ffffff', edge: '#000000', sub: '#e52b2b' },
+    { name: 'Laranja', pet: 'clear', liquid: 'f28a1e', cap: '2f8a3a', label: 'f07a14', band: 'd4600a', logo: '#1f4fa8', edge: '#ffffff', sub: '#ffe14a' },
+    { name: 'Limão', pet: 'green', liquid: 'a6dc8a', cap: '2f8a3a', label: '4fb848', band: '2f8f30', logo: '#1f4fa8', edge: '#ffffff', sub: '#ffe14a' },
+    { name: 'Uva', pet: 'green', liquid: '4a1a3a', cap: '2f8a3a', label: '5b2a86', band: '3e1a62', logo: '#ffffff', edge: '#2a0e45', sub: '#a6e06a' },
+    { name: 'Maçã', pet: 'green', liquid: 'd8a640', cap: 'd21f26', label: 'd7262b', band: 'ffd23a', logo: '#ffffff', edge: '#6e0a0f', sub: '#ffffff', straight: true },
+    { name: 'Abacaxi', pet: 'green', liquid: 'd9b52a', cap: '2f8a3a', label: 'f4e21c', band: 'd8c40a', logo: '#1f6b2e', edge: '#ffffff', sub: '#1f6b2e' },
+    { name: 'Tubaína', pet: 'green', liquid: 'c78a2a', cap: 'eeeeee', label: 'ffe14a', band: 'd7262b', logo: '#d7262b', edge: '#1d3f9a', sub: '#1d3f9a', tubaina: true }
+  ];
 
   let best = 0;
   try { best = Number(localStorage.getItem('jabotiRunBest') || 0); } catch (e) {}
@@ -139,7 +153,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   const IDLE_POSE = {
     by: 0, rot: 0, sx: 1, sy: 1,
     l0t: -.08, l0s: 0, l1t: .1, l1s: 0,
-    a0u: -.35, a0f: -.3, a1u: 2.5, a1f: .5,
+    a0u: -.55, a0f: .3, a1u: 2.45, a1f: .45,
     lx: 0, ly: .2, brow: 0, eye: 1
   };
 
@@ -248,10 +262,8 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       else sizes = score > 150 ? ['s', 'l', 's'] : ['s', 's'];
       let x = x0;
       sizes.forEach(sz => {
-        const img = IMG[pick(sz === 'l' ? FLAVORS_2L : FLAVORS_600)];
-        const bh = sz === 'l' ? 86 : 64;
-        const bw = ok(img) ? bh * img.naturalWidth / img.naturalHeight : (sz === 'l' ? 32 : 24);
-        obstacles.push({ kind: 'bottle', x, w: bw, h: bh, img, hue: Math.random() < .5 ? 'red' : 'orange', tilt: (Math.random() - .5) * .06 });
+        const bw = sz === 'l' ? 32 : 24, bh = sz === 'l' ? 80 : 58;
+        obstacles.push({ kind: 'bottle', x, w: bw, h: bh, flavor: pick(FLAVORS), tilt: (Math.random() - .5) * .06 });
         x += bw + 6;
       });
       w = x - x0;
@@ -283,7 +295,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       return (o.x - cx) ** 2 + (o.y - cy) ** 2 < (o.r - 3) ** 2;
     }
     const top = o.kind === 'crate' ? GROUND - o.h - 10 : GROUND - o.h + 8;
-    return p.x2 > o.x + 4 && p.x1 < o.x + o.w - 4 && p.y2 > top;
+    return p.x2 > o.x + 5 && p.x1 < o.x + o.w - 5 && p.y2 > top;
   }
   function die() {
     state = 'dying'; hitstop = .12; shake = 14;
@@ -426,7 +438,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       // deslizando
       T.by = 40; T.sy = .72; T.sx = 1.14; T.rot = -.28;
       T.l0t = .7; T.l0s = -1.5; T.l1t = 1.45; T.l1s = .05;
-      T.a0u = -1.9; T.a0f = .5; T.a1u = -1.4; T.a1f = .6;
+      T.a0u = -1.9; T.a0f = .5; T.a1u = 1.55; T.a1f = .25;
       T.lx = .9; T.ly = -.1; T.brow = -2; T.mouth = 'grit';
     } else if (player.ground) {
       // corrida
@@ -438,8 +450,9 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
         const q = p + i * Math.PI;
         T['l' + i + 't'] = .1 + Math.sin(q) * .85;
         T['l' + i + 's'] = -(.2 + 1.15 * Math.max(0, Math.cos(q)));
-        T['a' + i + 'u'] = -Math.sin(q) * (.85 + sp * .3) - .25;
-        T['a' + i + 'f'] = .85;
+        const sw = Math.sin(q) * (.5 + sp * .15);
+        T['a' + i + 'u'] = i ? .95 - sw : -.95 - sw;
+        T['a' + i + 'f'] = i ? .55 : .55;
       }
       T.lx = .8; T.ly = .05; T.brow = -1; T.mouth = 'smile';
       const next = obstacles.find(o => o.x + (o.w || 20) > PX && o.x < PX + 190);
@@ -448,18 +461,18 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       // subindo
       T.by = -6; T.sy = 1.08; T.sx = .93; T.rot = -.06;
       T.l0t = -.55; T.l0s = -1.1; T.l1t = 1.15; T.l1s = -1.7;
-      T.a0u = -2.5; T.a0f = .5; T.a1u = 2.6; T.a1f = -.4;
+      T.a0u = -2.4; T.a0f = .35; T.a1u = 2.4; T.a1f = -.35;
       T.lx = .7; T.ly = -.7; T.brow = 2; T.mouth = 'open';
     } else {
       // caindo
       T.by = -2; T.sy = 1.02; T.sx = .99; T.rot = .06;
       T.l0t = -.2; T.l0s = -.5; T.l1t = .45; T.l1s = -.35;
-      T.a0u = -1.95; T.a0f = -.5; T.a1u = 1.95; T.a1f = .5;
+      T.a0u = -1.95; T.a0f = -.45; T.a1u = 1.95; T.a1f = .45;
       T.lx = .6; T.ly = .8; T.brow = 1; T.mouth = 'o';
     }
     if (player.spin >= 0) {
       T.l0t = .9; T.l0s = -2.2; T.l1t = 1.3; T.l1s = -2.3;
-      T.a0u = .9; T.a0f = 1.4; T.a1u = 1.2; T.a1f = 1.4;
+      T.a0u = -.9; T.a0f = -1.1; T.a1u = .9; T.a1f = 1.1;
       T.mouth = 'open'; T.sy = .94; T.sx = 1.04;
     }
     if (celebrate > 0 && !player.slide) T.mouth = 'open';
@@ -494,7 +507,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       return { H: Hp, K, F, b };
     });
     const arms = [0, 1].map(i => {
-      const S = bp(i ? 4 : -17, i ? 23 : 7);
+      const S = bp(i ? R - 4 : -(R - 4), i ? 6 : 3);
       const a = P['a' + i + 'u'] - rot, b = a + P['a' + i + 'f'];
       const E = { x: S.x + Math.sin(a) * 14, y: S.y + Math.cos(a) * 14 };
       const Hd = { x: E.x + Math.sin(b) * 13, y: E.y + Math.cos(b) * 13 };
@@ -538,15 +551,9 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
       ctx.beginPath(); ctx.arc(A.E.x + (A.Hd.x - A.E.x) * .75, A.E.y + (A.Hd.y - A.E.y) * .75, 5.5, 0, TAU); ctx.fill();
     };
 
-    // o braço da frente nunca cobre o rosto: se a mão subir até a altura da boca, ele passa para trás do corpo
-    const localY = pt => -(pt.x - C.x) * sr + (pt.y - C.y) * cr;
-    const frontArmBehind = Math.min(localY(arms[1].E), localY(arms[1].Hd)) < R * P.sy * .75;
-    const frontArm = () => { limb([arms[1].S, arms[1].E, arms[1].Hd], 5, '#f7f7f7', '#c4c4c4'); glove(arms[1], false); };
-
     // membros de trás
     limb([legs[0].H, legs[0].K, legs[0].F], 6, '#e2e2e2', '#bdbdbd'); shoe(legs[0], true);
     limb([arms[0].S, arms[0].E, arms[0].Hd], 5, '#e2e2e2', '#bdbdbd'); glove(arms[0], true);
-    if (frontArmBehind) frontArm();
     limb([legs[1].H, legs[1].K, legs[1].F], 6, '#f7f7f7', '#c4c4c4'); shoe(legs[1], false);
 
     // corpo
@@ -615,7 +622,7 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.restore();
 
     // braço da frente
-    if (!frontArmBehind) frontArm();
+    limb([arms[1].S, arms[1].E, arms[1].Hd], 5, '#f7f7f7', '#c4c4c4'); glove(arms[1], false);
 
     // estrelinhas de tontura
     if (dead && player.landedDead) {
@@ -762,11 +769,12 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     ctx.fillStyle = brickS; for (let r = 0; r < 4; r++) ctx.fillRect(x + 178, base - 40 + r * 10, 156, 1);
     ctx.fillStyle = pillar; for (let i = 0; i < 9; i++) ctx.fillRect(x + 180 + i * 19, base - 44, 3, 44);
     ctx.fillStyle = D('3a6fb0', .7); ctx.fillRect(x + 228, base - 26, 18, 26);
-    const lx = x + 256, ly = base - 84;
-    if (ok(IMG['logo-jaboti'])) {
-      ctx.fillStyle = D('ffffff', .6); ctx.beginPath(); ctx.ellipse(lx, ly, 25, 16, -.12, 0, TAU); ctx.fill();
-      ctx.drawImage(IMG['logo-jaboti'], lx - 23, ly - 15.5, 46, 31.5);
-      if (dark > .2) glows.push(['logo', lx, ly]);
+    // logo na fachada, inteiro dentro do arco (o topo do arco fica em base - 92)
+    const lx = x + 256, ly = base - 66, logo = IMG['logo-jaboti'];
+    if (ok(logo)) {
+      const lw = 40, lh = lw * logo.naturalHeight / logo.naturalWidth;
+      ctx.drawImage(logo, lx - lw / 2, ly - lh / 2, lw, lh);
+      if (dark > .2) glows.push(['logo', lx, ly, lw, lh]);
     }
     // carros estacionados
     [[200, 'e9ecef'], [228, 'c9ced3']].forEach(([dx, c]) => {
@@ -775,49 +783,28 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
     });
   }
 
-  // outdoors com as marcas da Jaboti
+  // outdoors com os logos das marcas da Jaboti
   const BRANDS = [
-    { logo: 'logo-jaboti', prods: ['2l-jaboti-guarana', '2l-jaboti-cola', '2l-jaboti-laranja'], text: 'Explosão de sabor.', bg: ['ee3a3f', 'a8131a'], ink: '#ffd23a' },
-    { title: 'TUBAÍNA', sub: 'O ORIGINAL JABOTI', prods: ['2l-tubaina'], text: 'O sabor da memória!', bg: ['ffe14a', 'f2a900'], ink: '#1d3f9a' },
-    { logo: 'logo-frupic', prods: ['prod-frupic'], text: 'Frutas, cor e diversão!', bg: ['8e3aa3', '4c1660'], ink: '#ffffff' },
-    { logo: 'logo-life', prods: ['prod-life'], text: 'Pureza, leveza, naturalidade.', bg: ['ffffff', 'a9dcf7'], ink: '#0c5a9c' },
-    { logo: 'logo-skywalk', prods: ['prod-skywalk'], text: 'Aventura, altitude, energia.', bg: ['e8faf7', '7fd0c6'], ink: '#0d2b2a' },
-    { logo: 'logo-jaboti', prods: ['2l-jaboti-maca', '2l-jaboti-uva', '2l-jaboti-limao', '2l-jaboti-abacaxi'], text: '58 anos refrescando gerações', bg: ['2a9d4a', '0f5f2a'], ink: '#ffffff' }
+    { logo: 'logo-jaboti', stripe: ['d7262b', 'ffc21a', '2a9d4a'] },
+    { logo: 'logo-frupic', stripe: ['f07a14', '8e3aa3', 'ffc21a'] },
+    { logo: 'logo-life', stripe: ['1d75c2', '7fd0f5', 'ffffff'] },
+    { logo: 'logo-skywalk', stripe: ['0d2b2a', '3fb8a8', '0d2b2a'] }
   ];
   const boardCache = [];
   function boardCanvas(i) {
     if (boardCache[i]) return boardCache[i];
-    const b = BRANDS[i], need = [b.logo, ...b.prods].filter(Boolean);
-    if (!need.every(n => ok(IMG[n]))) return null;
+    const b = BRANDS[i], im = IMG[b.logo];
+    if (!ok(im)) return null;
     const c = document.createElement('canvas'); c.width = 340; c.height = 170;
     const g = c.getContext('2d');
-    const bg = g.createLinearGradient(0, 0, 340, 170); bg.addColorStop(0, '#' + b.bg[0]); bg.addColorStop(1, '#' + b.bg[1]);
+    const bg = g.createLinearGradient(0, 0, 0, 170); bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#eef1f3');
     g.fillStyle = bg; g.fillRect(0, 0, 340, 170);
-    g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(170, 0); g.lineTo(60, 170); g.lineTo(0, 170); g.fill();
-    // produtos à direita
-    const ps = b.prods.map(n => IMG[n]), ph = 150;
-    let px = 330;
-    for (let k = ps.length - 1; k >= 0; k--) {
-      const im = ps[k], pw = ph * im.naturalWidth / im.naturalHeight;
-      px -= ps.length > 1 ? pw * .72 : pw;
-      g.drawImage(im, px, 162 - ph, pw, ph);
-    }
-    const area = Math.min(px, 210) - 12;
-    // logo ou título
-    if (b.logo) {
-      const im = IMG[b.logo], s2 = Math.min(area / im.naturalWidth, 92 / im.naturalHeight);
-      g.drawImage(im, 14 + (area - im.naturalWidth * s2) / 2, 14, im.naturalWidth * s2, im.naturalHeight * s2);
-    } else {
-      g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.font = 'italic 900 40px system-ui,sans-serif';
-      g.fillStyle = '#1d3f9a'; g.fillText(b.title, 14 + area / 2 + 3, 54 + 3);
-      g.fillStyle = '#d7262b'; g.fillText(b.title, 14 + area / 2, 54);
-      g.font = '800 13px system-ui,sans-serif'; g.fillStyle = '#1d3f9a'; g.fillText(b.sub, 14 + area / 2, 92);
-    }
-    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = b.ink;
-    let fs = 19; g.font = `800 ${fs}px system-ui,sans-serif`;
-    while (g.measureText(b.text).width > area && fs > 11) { fs--; g.font = `800 ${fs}px system-ui,sans-serif`; }
-    g.fillText(b.text, 14 + area / 2, 134);
+    // faixas com as cores da marca na base
+    b.stripe.forEach((col, k) => { g.fillStyle = '#' + col; g.fillRect(0, 148 + k * 7.3, 340, 7.4); });
+    const sc = Math.min(300 / im.naturalWidth, 120 / im.naturalHeight);
+    const lw = im.naturalWidth * sc, lh = im.naturalHeight * sc;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(im, (340 - lw) / 2, (146 - lh) / 2, lw, lh);
     return (boardCache[i] = c);
   }
   function drawBillboard(x, i) {
@@ -989,11 +976,11 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
         });
         if (c) { ctx.globalAlpha = dark * .55; ctx.drawImage(c, x, y, w, h); ctx.globalAlpha = 1; }
       } else if (gw[0] === 'logo') {
-        const [, x, y] = gw;
-        const g = ctx.createRadialGradient(x, y, 4, x, y, 40);
-        g.addColorStop(0, `rgba(255,120,90,${dark * .35})`); g.addColorStop(1, 'rgba(255,120,90,0)');
-        ctx.fillStyle = g; ctx.fillRect(x - 40, y - 40, 80, 80);
-        ctx.globalAlpha = dark * .85; ctx.drawImage(IMG['logo-jaboti'], x - 23, y - 15.5, 46, 31.5); ctx.globalAlpha = 1;
+        const [, x, y, lw, lh] = gw;
+        const g = ctx.createRadialGradient(x, y, 4, x, y, 34);
+        g.addColorStop(0, `rgba(255,120,90,${dark * .3})`); g.addColorStop(1, 'rgba(255,120,90,0)');
+        ctx.fillStyle = g; ctx.fillRect(x - 34, y - 34, 68, 68);
+        ctx.globalAlpha = dark * .85; ctx.drawImage(IMG['logo-jaboti'], x - lw / 2, y - lh / 2, lw, lh); ctx.globalAlpha = 1;
       } else if (gw[0] === 'bay') {
         ctx.fillStyle = `rgba(255,214,130,${dark * .75})`; ctx.fillRect(gw[1], gw[2], gw[3], gw[4]);
       } else if (gw[0] === 'sign') {
@@ -1018,48 +1005,91 @@ kbd{font:inherit;font-weight:700;color:var(--ink);background:#123526;border:1px 
   // ================================================================
   //  OBJETOS DO JOGO
   // ================================================================
+  // cada garrafa (sabor × tamanho) é desenhada uma vez em alta resolução e reaproveitada
+  const bottleCache = {};
+  function bottleSprite(f, w, h) {
+    const key = f.name + w + 'x' + h;
+    if (bottleCache[key]) return bottleCache[key];
+    const S = 3, pad = 2, c = document.createElement('canvas');
+    c.width = (w + pad * 2) * S; c.height = (h + pad * 2) * S;
+    const g = c.getContext('2d'); g.scale(S, S); g.translate(pad, pad);
+    const top = 0, bodyTop = h * .3, bottom = h;
+    const shape = () => {
+      g.beginPath();
+      g.moveTo(w * .34, top + 8); g.lineTo(w * .34, h * .16);
+      g.quadraticCurveTo(0, h * .22, 0, bodyTop);
+      g.lineTo(0, bottom - 8); g.quadraticCurveTo(w * .2, bottom + 1, w * .5, bottom - 3); g.quadraticCurveTo(w * .8, bottom + 1, w, bottom - 8);
+      g.lineTo(w, bodyTop); g.quadraticCurveTo(w, h * .22, w * .66, h * .16);
+      g.lineTo(w * .66, top + 8); g.closePath();
+    };
+    // líquido
+    g.save(); shape(); g.clip();
+    const lg = g.createLinearGradient(0, 0, w, 0);
+    lg.addColorStop(0, mix(f.liquid, '000000', .2)); lg.addColorStop(.35, mix(f.liquid, 'ffffff', .12)); lg.addColorStop(1, mix(f.liquid, '000000', .3));
+    g.fillStyle = lg; g.fillRect(0, h * .2, w, h);
+    // PET verde ou transparente por cima
+    const pg = g.createLinearGradient(0, 0, w, 0);
+    if (f.pet === 'green') { pg.addColorStop(0, 'rgba(30,130,60,.3)'); pg.addColorStop(.3, 'rgba(210,255,220,.28)'); pg.addColorStop(.5, 'rgba(60,170,90,.12)'); pg.addColorStop(1, 'rgba(10,90,40,.38)'); }
+    else { pg.addColorStop(0, 'rgba(255,255,255,.08)'); pg.addColorStop(.3, 'rgba(255,255,255,.35)'); pg.addColorStop(.5, 'rgba(255,255,255,.05)'); pg.addColorStop(1, 'rgba(0,0,0,.08)'); }
+    g.fillStyle = pg; g.fillRect(0, 0, w, h);
+    g.restore();
+    shape(); g.strokeStyle = f.pet === 'green' ? '#1f5f3b' : '#7d8a90'; g.lineWidth = 1.6; g.stroke();
+    // anéis do PET
+    g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(1, bodyTop + 4); g.lineTo(w - 1, bodyTop + 4); g.moveTo(1, bottom - 14); g.lineTo(w - 1, bottom - 14); g.stroke();
+
+    // rótulo
+    const ly = h * .43, lh = h * .3;
+    g.fillStyle = '#' + f.label; g.fillRect(0, ly, w, lh);
+    if (f.tubaina) {
+      g.fillStyle = '#' + f.band; g.fillRect(0, ly, w, 1.6); g.fillRect(0, ly + lh - 1.6, w, 1.6);
+      g.save(); g.translate(w / 2, ly + lh * .45); g.rotate(-.12);
+      g.font = `italic 900 ${w * .27}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 2; g.strokeStyle = f.edge; g.strokeText('TUBAÍNA', 0, 0); g.fillStyle = f.logo; g.fillText('TUBAÍNA', 0, 0);
+      g.restore();
+      g.fillStyle = f.sub; g.font = `800 ${w * .16}px system-ui,sans-serif`; g.textAlign = 'center'; g.fillText('JABOTI', w / 2, ly + lh * .86);
+    } else {
+      // faixa diagonal de destaque
+      g.fillStyle = '#' + f.band; g.beginPath(); g.moveTo(0, ly + lh * .78); g.lineTo(w, ly + lh * .58); g.lineTo(w, ly + lh); g.lineTo(0, ly + lh); g.fill();
+      g.save(); g.translate(w / 2, ly + lh * .4); if (!f.straight) g.rotate(-.14);
+      g.font = `${f.straight ? '' : 'italic '}900 ${w * (f.straight ? .3 : .36)}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const word = f.straight ? 'JABOTI' : 'Jaboti';
+      g.lineJoin = 'round'; g.lineWidth = 2.2; g.strokeStyle = f.edge; g.strokeText(word, 0, 0);
+      g.fillStyle = f.logo; g.fillText(word, 0, 0);
+      g.restore();
+      // folhinha do "i", como no logo
+      g.fillStyle = '#e3262b'; g.beginPath(); g.ellipse(w * .84, ly + lh * .16, w * .07, w * .03, -.5, 0, TAU); g.fill();
+      g.fillStyle = f.sub; g.font = `italic 800 ${w * .17}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(f.short || f.name, w * .55, ly + lh * .8);
+      if (f.name === 'Maçã') { g.fillStyle = '#e3262b'; g.beginPath(); g.arc(w * .78, ly + lh * .78, w * .08, 0, TAU); g.fill(); }
+    }
+    // tampa
+    g.fillStyle = '#' + f.cap;
+    g.beginPath(); g.roundRect ? g.roundRect(w * .27, top, w * .46, 10, 2) : g.rect(w * .27, top, w * .46, 10); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(w * .3, top + 2, w * .4, 2);
+    g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(w * .3, top + 6, w * .4, 1);
+    // brilho
+    g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(w * .16, bodyTop + 3, 2.5, h * .12); g.fillRect(w * .16, ly + lh + 4, 2.5, h * .1);
+    return (bottleCache[key] = c);
+  }
   function drawBottle(o) {
     const x = o.x, w = o.w, h = o.h, top = GROUND - h;
     ctx.save();
     ctx.translate(x + w / 2, GROUND); ctx.rotate(o.tilt); ctx.translate(-(x + w / 2), -GROUND);
     ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(x + w / 2, GROUND + 2, w * .7, 4, 0, 0, TAU); ctx.fill();
-    if (ok(o.img)) { ctx.drawImage(o.img, x, top, w, h); ctx.restore(); return; }
-    const bodyTop = top + h * .3;
-    const g = ctx.createLinearGradient(x, 0, x + w, 0);
-    g.addColorStop(0, 'rgba(60,160,100,.96)'); g.addColorStop(.3, 'rgba(190,245,210,.98)'); g.addColorStop(.55, 'rgba(110,200,140,.96)'); g.addColorStop(1, 'rgba(35,120,72,.96)');
-    ctx.fillStyle = g; ctx.strokeStyle = '#1f5f3b'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x + w * .34, top + 8); ctx.lineTo(x + w * .34, top + h * .16);
-    ctx.quadraticCurveTo(x, top + h * .22, x, bodyTop);
-    ctx.lineTo(x, GROUND - 8); ctx.quadraticCurveTo(x + w * .2, GROUND + 1, x + w * .5, GROUND - 3); ctx.quadraticCurveTo(x + w * .8, GROUND + 1, x + w, GROUND - 8);
-    ctx.lineTo(x + w, bodyTop);
-    ctx.quadraticCurveTo(x + w, top + h * .22, x + w * .66, top + h * .16);
-    ctx.lineTo(x + w * .66, top + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // anéis do PET
-    ctx.strokeStyle = 'rgba(20,80,45,.35)'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(x + 1, bodyTop + 4); ctx.lineTo(x + w - 1, bodyTop + 4); ctx.moveTo(x + 1, GROUND - 14); ctx.lineTo(x + w - 1, GROUND - 14); ctx.stroke();
-    // rótulo
-    const ly = top + h * .45, lh = h * .26;
-    ctx.fillStyle = o.hue === 'red' ? '#d7262b' : '#f08a1c'; ctx.fillRect(x, ly, w, lh);
-    ctx.fillStyle = '#ffd23a'; ctx.fillRect(x, ly + lh * .38, w, lh * .24);
-    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(x + w * .5, ly + lh * .5, lh * .28, 0, TAU); ctx.fill();
-    // tampa
-    ctx.fillStyle = '#c81e24'; rr(x + w * .27, top, w * .46, 10, 2); ctx.fill();
-    ctx.fillStyle = '#ff4b4f'; ctx.fillRect(x + w * .3, top + 2, w * .4, 2);
-    // brilho
-    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(x + w * .18, bodyTop + 3, 3, h * .14);
-    ctx.fillRect(x + w * .18, ly + lh + 4, 3, h * .1);
+    ctx.drawImage(bottleSprite(o.flavor, w, h), x - 2, top - 2, w + 4, h + 4);
     ctx.restore();
   }
   function drawCrate(o) {
     const x = o.x, w = o.w, h = o.h, top = GROUND - h;
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x + w / 2, GROUND + 2, w * .6, 5, 0, 0, TAU); ctx.fill();
-    // garrafas 600 ml saindo do engradado
-    if (!o.imgs) o.imgs = [0, 1, 2, 3].map(() => IMG[pick(FLAVORS_600)]);
-    o.imgs.forEach((img, i) => {
-      const bx = x + 5 + i * 16;
-      if (ok(img)) ctx.drawImage(img, bx, top - 20, 54 * img.naturalWidth / img.naturalHeight, 54);
-      else { ctx.fillStyle = 'rgba(90,185,125,.95)'; ctx.fillRect(bx + 3, top - 12, 9, 16); ctx.fillStyle = '#c81e24'; ctx.fillRect(bx + 2, top - 16, 11, 6); }
+    // gargalos saindo do engradado, com a tampa de cada sabor
+    if (!o.flavors) o.flavors = [0, 1, 2, 3].map(() => pick(FLAVORS));
+    o.flavors.forEach((f, i) => {
+      const bx = x + 9 + i * 16;
+      ctx.fillStyle = mix(f.liquid, 'ffffff', .15); ctx.fillRect(bx, top - 12, 9, 16);
+      ctx.fillStyle = f.pet === 'green' ? 'rgba(60,160,90,.45)' : 'rgba(255,255,255,.3)'; ctx.fillRect(bx, top - 12, 9, 16);
+      ctx.fillStyle = '#' + f.cap; ctx.fillRect(bx - 1, top - 16, 11, 6);
     });
     ctx.fillStyle = '#c3242a'; rr(x, top, w, h, 6); ctx.fill();
     ctx.fillStyle = '#9e1a1f'; ctx.fillRect(x, top + h - 8, w, 8);
