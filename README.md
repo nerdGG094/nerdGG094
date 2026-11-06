@@ -95,38 +95,14 @@ Nossa engenharia é orientada pelas necessidades do negócio e pela busca contí
 
 <div align="center">
 
-### SOFTWARE DEVELOPMENT
-
-<img src="https://skillicons.dev/icons?i=python,typescript,javascript,nodejs,react&theme=dark" />
+<img src="https://skillicons.dev/icons?i=python,ts,js,kotlin,androidstudio,nodejs,react,qt&theme=dark&perline=8" alt="Python, TypeScript, JavaScript, Kotlin, Android, Node.js, React, PyQt"/>
+<br/>
+<img src="https://skillicons.dev/icons?i=postgres&theme=dark" alt="PostgreSQL"/>&nbsp;<img src="images/oracle.svg" width="48" height="48" alt="Oracle"/>&nbsp;<img src="https://skillicons.dev/icons?i=linux,bash,git,github,docker,vscode&theme=dark" alt="Linux, Bash, Git, GitHub, Docker, VS Code"/>
 
 <br/>
 
-<img src="https://img.shields.io/badge/Python-063D27?style=for-the-badge&logo=python&logoColor=9BCB45"/>
-<img src="https://img.shields.io/badge/TypeScript-063D27?style=for-the-badge&logo=typescript&logoColor=9BCB45"/>
-<img src="https://img.shields.io/badge/JavaScript-063D27?style=for-the-badge&logo=javascript&logoColor=9BCB45"/>
-<img src="https://img.shields.io/badge/Node.js-063D27?style=for-the-badge&logo=nodedotjs&logoColor=9BCB45"/>
-<img src="https://img.shields.io/badge/React-063D27?style=for-the-badge&logo=react&logoColor=9BCB45"/>
-
-<br/><br/>
-
-### DESKTOP & MOBILE DEVELOPMENT
-
-<img src="https://img.shields.io/badge/PyQt-063D27?style=for-the-badge&logo=qt&logoColor=9BCB45"/>
-<img src="https://img.shields.io/badge/Kotlin-063D27?style=for-the-badge&logo=kotlin&logoColor=9BCB45"/>
-<img src="https://img.shields.io/badge/Android-063D27?style=for-the-badge&logo=android&logoColor=9BCB45"/>
-
-<br/><br/>
-
-### DATABASE ENGINEERING
-
-<img src="https://img.shields.io/badge/ORACLE-063D27?style=for-the-badge&logo=oracle&logoColor=F80000"/>
-<img src="https://img.shields.io/badge/POSTGRESQL-063D27?style=for-the-badge&logo=postgresql&logoColor=4169E1"/>
-
-<br/><br/>
-
-### INFRASTRUCTURE & DEVELOPMENT TOOLS
-
-<img src="https://skillicons.dev/icons?i=linux,bash,git,github,docker,vscode&theme=dark" />
+<sub><b>Linguagens</b> Python · TypeScript · JavaScript · Kotlin &nbsp;|&nbsp; <b>Apps</b> Android · Node.js · React · PyQt</sub><br/>
+<sub><b>Dados</b> PostgreSQL · Oracle &nbsp;|&nbsp; <b>Infra e ferramentas</b> Linux · Bash · Git · GitHub · Docker · VS Code</sub>
 
 </div>
 
@@ -141,63 +117,26 @@ Nossa engenharia é orientada pelas necessidades do negócio e pela busca contí
 O JABDEV conecta tecnologia, informação e operações, desenvolvendo soluções que apoiam a evolução digital da Refrigerantes Jaboti.
 
 ```mermaid
-flowchart TB
+flowchart LR
+    A["REFRIGERANTES JABOTI<br/><small>negócio e operações</small>"]
+    B{{"JABDEV<br/><small>software engineering</small>"}}
+    C["Software"]
+    D["Automação"]
+    E["Dados"]
+    F["Integração"]
+    G(["Evolução do negócio<br/><small>eficiência · integração · inovação</small>"])
 
-    A(["🏢 REFRIGERANTES JABOTI<br/>Identidade • Negócio • Operações"])
+    A --> B --> C & D & E & F --> G
 
-    B(["💻 JABDEV<br/>SOFTWARE ENGINEERING"])
-
-    A --> B
-
-    B --> C
-    B --> D
-    B --> E
-    B --> F
-
-    subgraph TECH["⚙️ TECHNOLOGY & ENGINEERING"]
-        direction LR
-
-        C["💻<br/>SOFTWARE<br/>DEVELOPMENT"]
-        D["🔄<br/>PROCESS<br/>AUTOMATION"]
-        E["🗄️<br/>DATABASE<br/>ENGINEERING"]
-        F["🔗<br/>SYSTEM<br/>INTEGRATION"]
-    end
-
-    C --> G
-    D --> H
-    E --> I
-    F --> J
-
-    subgraph BUSINESS["🏭 BUSINESS APPLICATIONS"]
-        direction LR
-
-        G["🏭<br/>INDUSTRY"]
-        H["🚚<br/>LOGISTICS"]
-        I["📊<br/>MANAGEMENT"]
-        J["📱<br/>DIGITAL"]
-    end
-
-    G --> K
-    H --> K
-    I --> K
-    J --> K
-
-    K(["🚀 BUSINESS EVOLUTION<br/>Eficiência • Integração • Inovação"])
-
-    classDef jaboti fill:#063D27,color:#FFFFFF,stroke:#9BCB45,stroke-width:3px
-    classDef jabdev fill:#087A45,color:#FFFFFF,stroke:#9BCB45,stroke-width:4px
-    classDef tech fill:#104C35,color:#FFFFFF,stroke:#55A96B,stroke-width:2px
-    classDef business fill:#E5F3D8,color:#164B2C,stroke:#78AD42,stroke-width:2px
-    classDef result fill:#9BCB45,color:#063D27,stroke:#FFFFFF,stroke-width:3px
-
-    class A jaboti
-    class B jabdev
-    class C,D,E,F tech
-    class G,H,I,J business
-    class K result
-
-    style TECH fill:#0B241A,stroke:#087A45,stroke-width:2px,color:#9BCB45
-    style BUSINESS fill:#F4FAEE,stroke:#78AD42,stroke-width:2px,color:#164B2C
+    classDef base fill:#063D27,color:#FFFFFF,stroke:#087A45,stroke-width:1px
+    classDef core fill:#087A45,color:#FFFFFF,stroke:#9BCB45,stroke-width:2px
+    classDef area fill:#0F2E21,color:#EAF5E9,stroke:#2F6346,stroke-width:1px
+    classDef goal fill:#9BCB45,color:#063D27,stroke:#9BCB45,stroke-width:1px
+    class A base
+    class B core
+    class C,D,E,F area
+    class G goal
+    linkStyle default stroke:#55A96B,stroke-width:1.5px
 ```
 
 ---
