@@ -89,7 +89,10 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
   // ================================================================
   //  CONFIGURAÇÃO
   // ================================================================
-  const W = 960, H = 360, GROUND = 290, PX = 150, TAU = Math.PI * 2;
+  // câmera afastada: o mundo tem 1/ZOOM do tamanho da tela (mais céu para os pulos altos e mais pista à frente).
+  // A tela continua 960×360 (proporção 8:3); tudo é desenhado em escala ZOOM.
+  const ZOOM = .82;
+  const W = Math.round(960 / ZOOM), H = Math.round(360 / ZOOM), GROUND = H - 70, PX = 170, TAU = Math.PI * 2;
   const G = 2800, JUMP_V = 820, DJUMP_V = 720, MAX_JUMP = 205;
   const START_SPEED = 440, MAX_SPEED = 1080, ACCEL = 9;
 
@@ -99,8 +102,8 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
   const APP = document.documentElement.classList.contains('app');
   let renderScale = Math.min(window.devicePixelRatio || 1, APP ? 1.5 : 2);
   function fit() {
-    canvas.width = Math.round(W * renderScale); canvas.height = Math.round(H * renderScale);
-    ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    canvas.width = Math.round(960 * renderScale); canvas.height = Math.round(360 * renderScale);
+    ctx.setTransform(renderScale * ZOOM, 0, 0, renderScale * ZOOM, 0, 0);
   }
   fit();
   window.addEventListener('resize', fit);
@@ -1100,7 +1103,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     // sol (arte do Gemini), com brilho e balançando de leve
     if (cyc < .52) {
       const u = cyc / .52;
-      const sx = 780 - u * 260, sy = 64 + smooth(.45, 1, u) * 230;
+      const sx = W * .81 - u * 260, sy = 64 + smooth(.45, 1, u) * (GROUND - 60);
       const sg = ctx.createRadialGradient(sx, sy, 10, sx, sy, 95);
       sg.addColorStop(0, `rgba(255,240,170,${.55 + dusk * .3})`); sg.addColorStop(1, 'rgba(255,240,170,0)');
       ctx.fillStyle = sg; ctx.fillRect(sx - 95, sy - 95, 190, 190);
@@ -1113,7 +1116,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     // lua (arte do Gemini: dormindo de gorro)
     if (cyc > .48 && cyc < .92) {
       const v = (cyc - .48) / .44;
-      const mx = 860 - v * 560, my = 220 - Math.sin(v * Math.PI) * 160 + Math.sin(t * 1.4) * 3;
+      const mx = W * .9 - v * 600, my = GROUND - 70 - Math.sin(v * Math.PI) * (GROUND - 130) + Math.sin(t * 1.4) * 3;
       const mg = ctx.createRadialGradient(mx, my, 6, mx, my, 80);
       mg.addColorStop(0, 'rgba(220,230,255,.4)'); mg.addColorStop(1, 'rgba(220,230,255,0)');
       ctx.fillStyle = mg; ctx.fillRect(mx - 80, my - 80, 160, 160);
@@ -2101,7 +2104,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
   // ================================================================
   const UI = '"Lilita One", system-ui, Segoe UI, sans-serif';
   if (window.FontFace) new FontFace('Lilita One', 'url(assets/fonts/lilita-one.woff2)').load().then(f => document.fonts.add(f)).catch(() => {});
-  let menuButtons = [], menuState = '', menuStart = 0;
+  let menuButtons = [], menuState = '', menuStart = 0, menuOY = 0;
   const easeOut = k => 1 - (1 - clamp(k, 0, 1)) ** 3;
   // texto com volume: "extrusão" escura embaixo, contorno e preenchimento em degradê
   function text3d(txt, x, y, size, top, bottom, depthCol, depth = 5) {
@@ -2127,7 +2130,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     if (yellow) { ctx.fillStyle = 'rgba(255,255,255,.35)'; rr(x - w / 2 + 10, y - h / 2 + 4, w - 20, h * .32, h * .16); ctx.fill(); }
     ctx.font = `${Math.round(h * .46)}px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = yellow ? '#5a2e00' : '#ffffff'; ctx.fillText(label, x, y + 2);
-    menuButtons.push({ id, x: x - w / 2, y: y - h / 2, w, h });
+    menuButtons.push({ id, x: x - w / 2, y: y - h / 2 + menuOY, w, h });
   }
   // cartão pequeno de estatística (rótulo em cima, valor embaixo)
   function statChip(x, y, w, label, value, color, icon) {
@@ -2163,12 +2166,13 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     if (state !== menuState) { menuState = state; menuStart = t; }
     const mt = t - menuStart, cx = W / 2;
     ctx.save();
+    menuOY = Math.round((H - 360) / 2); ctx.translate(0, menuOY);         // centraliza na vertical (câmera afastada)
 
     if (state === 'ready') {
       // escurece uma faixa central para o conteúdo; as laterais (e o mascote) ficam mais claras
       const ov = ctx.createLinearGradient(0, 0, W, 0);
       ov.addColorStop(0, 'rgba(3,18,11,.12)'); ov.addColorStop(.26, 'rgba(3,18,11,.62)'); ov.addColorStop(.74, 'rgba(3,18,11,.62)'); ov.addColorStop(1, 'rgba(3,18,11,.12)');
-      ctx.fillStyle = ov; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = ov; ctx.fillRect(0, -menuOY, W, H);
       const logo = IMG['logo-jaboti'], intro = easeOut(mt / .6);
       ctx.globalAlpha = intro;
       if (ok(logo)) { const lh = 30, lw = logo.naturalWidth * lh / logo.naturalHeight; ctx.drawImage(logo, cx - lw / 2, 20, lw, lh); }
@@ -2198,7 +2202,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     }
 
     if (state === 'paused') {
-      ctx.fillStyle = 'rgba(2,10,7,.6)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(2,10,7,.6)'; ctx.fillRect(0, -menuOY, W, H);
       text3d('PAUSADO', W / 2, 130, 60, '#ffffff', '#d8f58a', '#063d27', 6);
       gameButton('resume', W / 2, 186, 230, 54, '▶  CONTINUAR', 'yellow', true);
       gameButton('menu', W / 2, 252, 170, 44, 'MENU', 'ghost');
@@ -2206,7 +2210,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
 
     if (state === 'over') {
       const k = easeOut(mt / .5);
-      ctx.fillStyle = `rgba(2,10,7,${.62 * k})`; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = `rgba(2,10,7,${.62 * k})`; ctx.fillRect(0, -menuOY, W, H);
       const ox = W / 2, oy = 34 - (1 - k) * 40;
       if (newBest) {                                       // raios dourados girando atrás da pontuação
         ctx.save(); ctx.translate(ox, 136); ctx.rotate(t * .4); ctx.globalAlpha = .22 * k;
@@ -2224,8 +2228,8 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
       statChip(ox + 160, 186, 140, 'DISTÂNCIA', Math.floor(dist / 50) + ' m', '#7fd0ff');
       if (ok(POSES_IMG)) {                                 // mascote em destaque: troféu no recorde, tonto no fim comum
         const pk = easeOut((mt - .1) / .5);
-        if (newBest) drawPose(3, 135, GROUND + 6 - Math.abs(Math.sin(t * 4)) * 10, .62 * pk, Math.sin(t * 4) * .05);
-        else drawPose(2, 135, GROUND + 6, .62 * pk, Math.sin(t * 2.6) * .05);
+        if (newBest) drawPose(3, 135, GROUND + 6 - menuOY - Math.abs(Math.sin(t * 4)) * 10, .62 * pk, Math.sin(t * 4) * .05);
+        else drawPose(2, 135, GROUND + 6 - menuOY, .62 * pk, Math.sin(t * 2.6) * .05);
       }
       if (player.deadT > 1.1) {
         gameButton('again', ox - 70, 284, 230, 54, '↻  JOGAR DE NOVO', 'yellow', true);
