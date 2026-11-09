@@ -664,11 +664,25 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   function spawn() {
     const r = Math.random(), x0 = W + 40;
     let w;
-    if (skateOn() && score > 60 && Math.random() < .2) {
-      // corrimão (só de skate): pula em cima para fazer grind, ou por cima
-      w = 300 + Math.round(Math.random() * 180);
-      obstacles.push({ kind: 'rail', x: x0, w, h: 50 });
-      for (let i = 0; i < 5; i++) coins.push({ x: x0 + 70 + i * (w - 130) / 4, y: GROUND - 50 - 62, ph: i * .5 });
+    if (skateOn() && score > 60 && Math.random() < .3) {
+      const q = Math.random();
+      if (q < .4) {
+        // corrimão (só de skate): pula em cima para fazer grind, ou por cima
+        w = 300 + Math.round(Math.random() * 180);
+        obstacles.push({ kind: 'rail', x: x0, w, h: 50 });
+        for (let i = 0; i < 5; i++) coins.push({ x: x0 + 70 + i * (w - 130) / 4, y: GROUND - 50 - 62, ph: i * .5 });
+      } else if (q < .7) {
+        // rampa: sobe nela andando e sai voando bem alto
+        w = 170;
+        obstacles.push({ kind: 'ramp', x: x0, w, h: 58 });
+        coinArc(x0 + w + 170, 6, 230, 230, 120);
+      } else {
+        // escadaria: pula para o patamar, no fim salta a escada sozinho (ou faz grind no corrimão inclinado)
+        const plat = 170 + Math.round(Math.random() * 90), up = 66, down = 190;
+        w = up + plat + down;
+        obstacles.push({ kind: 'stairs', x: x0, w, h: 60, up, plat, down });
+        for (let i = 0; i < 4; i++) coins.push({ x: x0 + up + 30 + i * (plat - 60) / 3, y: GROUND - 60 - 45, ph: i * .5 });
+      }
       return w;
     }
     if (score > 250 && r < .07) {
@@ -831,10 +845,36 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     { label: 'CROOKED!', f: 3, dy: 13, tilt: .1, color: '#f08a1c' }
   ];
   let lastGrind = null;
+  // obstáculos de skate onde dá para andar em cima: rampa (curva que sobe) e escadaria (degraus + patamar)
+  function surfaceAt(o, x) {
+    const u = x - o.x;
+    if (o.kind === 'ramp') return u < 0 || u > o.w ? -1 : o.h * Math.pow(u / o.w, 1.6);
+    if (o.kind === 'stairs') {
+      if (u < 0 || u > o.up + o.plat) return -1;
+      return u < o.up ? Math.min(3, Math.floor(u / (o.up / 3)) + 1) * o.h / 3 : o.h;
+    }
+    return -1;
+  }
+  function floorAt(x) {
+    let f = 0;
+    for (const o of obstacles) if (!o.dead && (o.kind === 'ramp' || o.kind === 'stairs')) f = Math.max(f, surfaceAt(o, x));
+    return f;
+  }
+  // altura do corrimão no ponto x (-1 = não tem): reto ou o da escadaria (desce junto com os degraus)
+  const STAIR_RAIL = 42;
+  function railTop(o, x) {
+    if (o.kind === 'rail') return x > o.x + 4 && x < o.x + o.w - 6 ? o.h : -1;
+    if (o.kind === 'stairs') {
+      const a = o.x + o.up + o.plat; if (x < a || x > o.x + o.w - 6) return -1;
+      return o.h - (x - a) / o.down * o.h + STAIR_RAIL;
+    }
+    return -1;
+  }
   function startGrind(o) {
     const g = pick(GRINDS.filter(x => x !== lastGrind)); lastGrind = g;
-    player.grind = { o, g, t: 0 }; player.ground = false; player.spin = -1; player.trail = []; player.vy = 0; player.y = o.h - g.dy; player.jumps = 0; player.land = .6;
-    popText(PX + 70, GROUND - o.h - 120, g.label, g.color); sfx.skland(); sparkle(PX + 10, GROUND - o.h, 12, '#ffe08a');
+    const slope = o.kind === 'stairs' ? Math.atan2(o.h, o.down) : 0;
+    player.grind = { o, g, t: 0, slope }; player.ground = false; player.spin = -1; player.trail = []; player.vy = 0; player.y = railTop(o, PX) - g.dy; player.jumps = 0; player.land = .6;
+    popText(PX + 70, GROUND - player.y - 130, g.label, g.color); sfx.skland(); sparkle(PX + 10, GROUND - player.y - g.dy, 12, '#ffe08a');
   }
   function endGrind(hop) {
     const G2 = player.grind; if (!G2) return;
@@ -848,6 +888,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     return { x1: PX - 22, x2: PX + 24, y1: GROUND - player.y - h, y2: GROUND - player.y - 3 };
   }
   function hits(o, p) {
+    if (o.kind === 'ramp' || o.kind === 'stairs') return false;            // batida nos degraus é tratada pelo chão (floorAt)
     if (o.kind === 'rail') return !player.grind && p.x2 > o.x + 6 && p.x1 < o.x + o.w - 6 && p.y2 > GROUND - o.h + 10;
     if (o.kind === 'prop') return o.hit.some(([hx, hw, hh]) => p.x2 > o.x + hx && p.x1 < o.x + hx + hw && p.y2 > GROUND - hh);
     if (o.kind === 'hang') return p.x2 > o.x + 6 && p.x1 < o.x + o.w - 6 && p.y1 < o.bottom;
@@ -861,7 +902,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function die() {
     state = 'dying'; hitstop = .12; shake = 14;
-    player.grind = null; player.vy = 640; player.ground = false; player.deadT = 0; player.landedDead = false; player.spin = -1;
+    player.grind = null; player.slope = 0; player.stairDrop = 0; player.vy = 640; player.ground = false; player.deadT = 0; player.landedDead = false; player.spin = -1;
     sparkle(PX + 20, GROUND - player.y - 50, 14, '#ffffff'); sfx.hit(); skills = {};
     if (skateOn()) boardFly = { x: PX, y: GROUND - player.y - 8, vx: 260, vy: -520, r: 0, vr: 9 };
     loja.carteira += caps; salvarLoja();                                      // tampinhas da partida vão para a carteira
@@ -916,22 +957,49 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       if (player.ground) player.coyote = .08; else player.coyote -= dt;
       if (player.buffer > 0 && (player.ground || player.coyote > 0) && player.jumps === 0) jump();
 
+      let floor = 0;
+      if (skateOn()) {
+        floor = floorAt(PX);
+        if (!player.grind && floorAt(PX + 18) > player.y + 14) {            // bateu de frente num degrau
+          const o = obstacles.find(o => o.kind === 'stairs' && surfaceAt(o, PX + 18) > player.y + 14);
+          if (o && handleHit(o)) return;
+          if (o) { o.dead = true; }
+        }
+        if (player.ground && !player.grind) {
+          if (floor >= player.y - 1) { player.slope = Math.atan2(floorAt(PX + 6) - floorAt(PX - 6), 12); player.y = floor; }
+          else {                                                            // saiu da rampa / do patamar
+            const o = obstacles.find(o => (o.kind === 'ramp' || o.kind === 'stairs') && PX >= o.x && PX < o.x + o.w + 30);
+            player.ground = false; player.jumps = 1; player.coyote = 0; player.slope = 0;
+            if (o && o.kind === 'ramp') {
+              player.vy = 900 + speed * .12; player.stretch = 1; sfx.djump(); dust(PX, GROUND - player.y, 8, 1.2);
+              bonus += 20 * mult(); popText(PX + 70, GROUND - player.y - 130, 'RAMPA! +' + 20 * mult(), '#7fd0ff'); ring(PX, GROUND - player.y - 30, '#ffffff');
+            } else if (o && railTop(o, PX) > 0) {                          // ollie direto para o corrimão: desce a escada no grind
+              sfx.jump(); startGrind(o);
+            } else { player.vy = 330; player.stairDrop = 1; sfx.jump(); }
+          }
+        } else player.slope = 0;
+      }
       if (player.grind) {                                                   // deslizando no corrimão
-        const o = player.grind.o; player.grind.t += dt;
-        player.vy = 0; player.y = o.h - player.grind.g.dy; player.coyote = 0;
-        if (Math.random() < .8) particles.push({ type: 'spark', x: PX + (Math.random() - .5) * 30, y: GROUND - o.h + 1, vx: -220 - Math.random() * 260, vy: -60 - Math.random() * 140, life: .3, max: .3, r: 1.5 + Math.random() * 2, color: Math.random() < .6 ? '#ffd23a' : '#ffffff' });
-        if (o.dead || o.x + o.w - 6 < PX) endGrind(true);
+        const o = player.grind.o, rt = railTop(o, PX); player.grind.t += dt;
+        player.vy = 0; player.coyote = 0;
+        if (rt >= 0) player.y = rt - player.grind.g.dy;
+        if (Math.random() < .8) particles.push({ type: 'spark', x: PX + (Math.random() - .5) * 30, y: GROUND - player.y - player.grind.g.dy + 1, vx: -220 - Math.random() * 260, vy: -60 - Math.random() * 140, life: .3, max: .3, r: 1.5 + Math.random() * 2, color: Math.random() < .6 ? '#ffd23a' : '#ffffff' });
+        if (o.dead || rt < 0) endGrind(true);
       } else if (!player.ground) {
         const prevY = player.y;
         let g = G;
         if (hold && player.vy > 0 && player.jumps === 1) g *= .62;
         if (duckHeld) g *= 2.6;
         player.vy -= g * dt; player.y += player.vy * dt;
-        if (skateOn() && player.vy < 0) for (const o of obstacles)        // caiu em cima do corrimão: grind
-          if (o.kind === 'rail' && !o.dead && PX > o.x + 4 && PX < o.x + o.w - 24 && prevY >= o.h - 4 && player.y < o.h - 4) { startGrind(o); break; }
-        if (!player.grind && player.y <= 0) {
-          player.y = 0; player.vy = 0; player.ground = true; player.jumps = 0; player.spin = -1;
-          player.land = 1; dust(PX, GROUND, 9, 1.2); if (skateOn()) sfx.skland();
+        if (skateOn() && player.vy < 0) for (const o of obstacles) {      // caiu em cima de um corrimão: grind
+          const rt = o.dead ? -1 : railTop(o, PX);
+          if (rt > 0 && prevY >= rt - 4 && player.y < rt - 4) { startGrind(o); break; }
+        }
+        if (!player.grind && player.y <= floor) {
+          const fall = player.stairDrop;
+          player.y = floor; player.vy = 0; player.ground = true; player.jumps = 0; player.spin = -1;
+          player.land = 1; dust(PX, GROUND - floor, 9, 1.2); if (skateOn()) sfx.skland();
+          if (fall && skateOn()) { player.stairDrop = 0; bonus += 25 * mult(); popText(PX + 60, GROUND - 120, 'DROP! +' + 25 * mult(), '#ffd84a'); }
         }
       }
       if (player.spin >= 0) {
@@ -1260,7 +1328,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     // sombra
     const sh = clamp(1 - player.y / 260, .3, 1);
     ctx.fillStyle = 'rgba(0,0,0,.2)';
-    ctx.beginPath(); ctx.ellipse(ox, GROUND + 3, (dead && player.landedDead ? 42 : 28) * sh, 5 * sh, 0, 0, TAU); ctx.fill();
+    const fl = skateOn() && state === 'running' ? floorAt(PX) : 0;          // sombra em cima do patamar/rampa
+    ctx.beginPath(); ctx.ellipse(ox, GROUND - fl + 3, (dead && player.landedDead ? 42 : 28) * sh, 5 * sh, 0, 0, TAU); ctx.fill();
 
     if (skateOn() && !dead) { drawSkater(ox, oy, tint, X); return; }
     if (boardFly && dead) drawBoardFly();
@@ -1400,7 +1469,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     const draw = (x, y, r, a) => {
       ctx.save(); ctx.globalAlpha *= a;
       ctx.translate(x, y);
-      if (player.grind && state === 'running') ctx.rotate(player.grind.g.tilt || 0);   // nosegrind / 5-0: inclina em cima do corrimão
+      if (player.grind && state === 'running') ctx.rotate((player.grind.g.tilt || 0) + player.grind.slope);
+      else if (player.ground && player.slope && state === 'running') ctx.rotate(-player.slope);   // nosegrind / 5-0: inclina em cima do corrimão
       if (r) { const fy = (SK.bot - SK.fy) * k; ctx.translate(0, -fy); ctx.rotate(r); ctx.translate(0, fy); }   // gira em volta da fruta
       drawBoard(f, k);                                                       // o skate não balança
       ctx.translate(0, -bob - (player.grind ? Math.random() * 1.2 : 0));
@@ -1415,7 +1485,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     } else if (player.trail) player.trail.length = 0;
     draw(ox, oy, rot, 1);
     if (state === 'running' && player.ground && !ghostPass && Math.random() < .35) {   // poeirinha das rodinhas
-      dust(ox - 92 * k, GROUND, 1, .5); if (Math.random() < .5) dust(ox + 80 * k, GROUND, 1, .5);
+      dust(ox - 92 * k, oy, 1, .5); if (Math.random() < .5) dust(ox + 80 * k, oy, 1, .5);
     }
   }
   function drawBoardFly() {
@@ -2397,6 +2467,69 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       ctx.fillStyle = gl; ctx.fillRect(PX - 26, top - 26, 52, 52);
     }
   }
+  // rampa de madeira (kicker) com lateral vermelha da Jaboti e borda de metal no topo
+  function drawRamp(o) {
+    const x0 = o.x, x1 = o.x + o.w, N = 14, pts = [];
+    for (let i = 0; i <= N; i++) { const x = x0 + o.w * i / N; pts.push([x, GROUND - surfaceAt(o, Math.min(x, x1 - .01))]); }
+    pts[N] = [x1, GROUND - o.h];
+    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2 + 10, GROUND + 2, o.w * .58, 5, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x0, GROUND); pts.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(x1, GROUND); ctx.closePath();
+    const sg = ctx.createLinearGradient(0, GROUND - o.h, 0, GROUND);
+    sg.addColorStop(0, '#e2363b'); sg.addColorStop(1, '#a3151b');
+    ctx.fillStyle = sg; ctx.fill(); ctx.strokeStyle = '#5a0c10'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.save(); ctx.clip();                                                  // faixa amarela e ripas na lateral
+    ctx.fillStyle = '#ffc21a'; ctx.fillRect(x0, GROUND - 16, o.w, 6);
+    ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 2;
+    for (let x = x0 + 40; x < x1; x += 40) { ctx.beginPath(); ctx.moveTo(x, GROUND); ctx.lineTo(x, GROUND - o.h); ctx.stroke(); }
+    ctx.restore();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#3a3d42'; ctx.lineWidth = 6; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y + 2) : ctx.moveTo(x, y + 2)); ctx.stroke();   // pista
+    ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+    ctx.strokeStyle = '#2f353b'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x1 - 2, GROUND - o.h + 1); ctx.lineTo(x1 + 1, GROUND - o.h + 1); ctx.stroke();
+    ctx.strokeStyle = '#dfe5ea'; ctx.lineWidth = 5; ctx.stroke();            // borda de metal (coping)
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = '#7a4a24'; ctx.fillRect(x1 - 6, GROUND - o.h + 4, 6, o.h - 4);   // traseira
+  }
+  // escadaria de concreto: 3 degraus, patamar, 4 degraus descendo e corrimão inclinado
+  function drawStairs(o) {
+    const x0 = o.x, a = o.x + o.up, b = a + o.plat, c = o.x + o.w, h = o.h, sw = o.up / 3, dw = o.down / 4;
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse((x0 + c) / 2, GROUND + 2, o.w * .53, 5, 0, 0, TAU); ctx.fill();
+    // corpo (perfil em degraus)
+    ctx.beginPath(); ctx.moveTo(x0, GROUND);
+    for (let i = 0; i < 3; i++) { ctx.lineTo(x0 + sw * i, GROUND - h * (i + 1) / 3); ctx.lineTo(x0 + sw * (i + 1), GROUND - h * (i + 1) / 3); }
+    ctx.lineTo(b, GROUND - h);
+    for (let i = 0; i < 4; i++) { ctx.lineTo(b + dw * i, GROUND - h * (4 - i) / 4); ctx.lineTo(b + dw * (i + 1), GROUND - h * (4 - i) / 4); }
+    ctx.lineTo(c, GROUND); ctx.closePath();
+    const g = ctx.createLinearGradient(0, GROUND - h, 0, GROUND);
+    g.addColorStop(0, '#d9d3c7'); g.addColorStop(1, '#a9a297');
+    ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#6b665d'; ctx.lineWidth = 2; ctx.stroke();
+    // bordas dos degraus (amarelo de segurança) e frente do patamar
+    ctx.fillStyle = '#ffc21a';
+    for (let i = 0; i < 3; i++) ctx.fillRect(x0 + sw * i, GROUND - h * (i + 1) / 3, sw, 3);
+    for (let i = 0; i < 4; i++) ctx.fillRect(b + dw * i, GROUND - h * (4 - i) / 4, dw, 3);
+    ctx.fillStyle = '#8f897f'; ctx.fillRect(a, GROUND - h, o.plat, 4);
+    ctx.fillStyle = 'rgba(0,0,0,.08)';
+    for (let x = a + 30; x < b - 10; x += 46) ctx.fillRect(x, GROUND - h + 8, 2, h - 10);
+    ctx.fillStyle = '#d7262b'; ctx.fillRect(a + o.plat / 2 - 30, GROUND - h + 18, 60, 20);   // plaquinha vermelha da Jaboti
+    ctx.fillStyle = '#ffc21a'; ctx.fillRect(a + o.plat / 2 - 30, GROUND - h + 33, 60, 3);
+    // corrimão inclinado com postes
+    const r0 = [b + 4, GROUND - railTop(o, b + 4)], r1 = [c - 6, GROUND - railTop(o, c - 6.01)];
+    [[b + 10, GROUND - h], [b + o.down / 2, GROUND - h / 2 - 4], [c - 12, GROUND - h / 4]].forEach(([px, py]) => {
+      const ry = GROUND - railTop(o, px);
+      ctx.fillStyle = '#8f1217'; ctx.fillRect(px - 3.5, ry, 7, py - ry);
+      ctx.fillStyle = '#ff4a4f'; ctx.fillRect(px - 1.5, ry, 2, py - ry);
+    });
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#2f353b'; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(r0[0], r0[1]); ctx.lineTo(r1[0], r1[1]); ctx.stroke();
+    ctx.strokeStyle = '#cfd6dd'; ctx.lineWidth = 7; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(r0[0] + 3, r0[1] - 2.5); ctx.lineTo(r1[0] - 3, r1[1] - 2.5); ctx.stroke();
+    ctx.lineCap = 'butt';
+    if (player.grind && player.grind.o === o) {
+      const gy = GROUND - railTop(o, PX), gl = ctx.createRadialGradient(PX, gy, 1, PX, gy, 26);
+      gl.addColorStop(0, 'rgba(255,230,140,.9)'); gl.addColorStop(1, 'rgba(255,200,60,0)');
+      ctx.fillStyle = gl; ctx.fillRect(PX - 26, gy - 26, 52, 52);
+    }
+  }
   function drawProp(o) {
     const im = sc(o.name);
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, GROUND + 2, o.w * .55, 4, 0, 0, TAU); ctx.fill();
@@ -3019,7 +3152,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     drawScenery();
     drawGround();
     coins.forEach(drawCoin);
-    obstacles.forEach(o => o.kind === 'can' ? drawCan(o) : o.kind === 'crate' ? drawCrates(o) : o.kind === 'bin' ? drawBinObs(o) : o.kind === 'hang' ? drawHang(o) : o.kind === 'drone' ? drawDrone(o) : o.kind === 'prop' ? drawProp(o) : o.kind === 'rail' ? drawRail(o) : drawBottle(o));
+    obstacles.forEach(o => o.kind === 'can' ? drawCan(o) : o.kind === 'crate' ? drawCrates(o) : o.kind === 'bin' ? drawBinObs(o) : o.kind === 'hang' ? drawHang(o) : o.kind === 'drone' ? drawDrone(o) : o.kind === 'prop' ? drawProp(o) : o.kind === 'rail' ? drawRail(o) : o.kind === 'ramp' ? drawRamp(o) : o.kind === 'stairs' ? drawStairs(o) : drawBottle(o));
     items.forEach(drawItem);
     drawParticles();
     drawGas();
