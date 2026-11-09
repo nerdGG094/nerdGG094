@@ -827,7 +827,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     { label: '50-50!', f: 3, dy: 13, color: '#ffd84a' },
     { label: 'NOSEGRIND!', f: 0, dy: 13, tilt: .14, color: '#7fd0ff' },
     { label: '5-0 GRIND!', f: 0, dy: 13, tilt: -.14, color: '#9bcb45' },
-    { label: 'BOARDSLIDE!', f: 1, dy: 21, sx: .26, color: '#ff6a5f' },
+    { label: 'BOARDSLIDE!', f: 1, dy: 21, yaw: 1.0, color: '#ff6a5f' },
     { label: 'CROOKED!', f: 3, dy: 13, tilt: .1, color: '#f08a1c' }
   ];
   let lastGrind = null;
@@ -1314,18 +1314,85 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     return 4;                                                                // ollie
   }
   // skate único embaixo dos pés (na pose do kickflip ele gira no eixo comprido)
+  // skate em 3D (para as manobras): shape com espessura, bicos levantados, lixa preta em cima, fundo vermelho com faixa
+  // amarela, trucks e rodinhas. roll = giro no eixo comprido (flip), yaw = giro na horizontal (shove-it / boardslide).
+  // Câmera um pouco de cima (como a calçada). Unidades = px do atlas do skate (262 de comprimento), vezes k.
+  const B3 = (() => {
+    const HL = 131, R = 33, cx = HL - R, per = [];
+    for (let i = 0; i <= 10; i++) { const a = -Math.PI / 2 + Math.PI * i / 10; per.push([cx + R * Math.cos(a), R * Math.sin(a)]); }
+    for (let i = 0; i <= 10; i++) { const a = Math.PI / 2 + Math.PI * i / 10; per.push([-cx + R * Math.cos(a), R * Math.sin(a)]); }
+    const kick = x => Math.max(0, Math.abs(x) - 90) * .42;                  // bico e rabeta levantados
+    const stripe = [];                                                       // faixa amarela no fundo (ao longo do comprimento)
+    for (let x = -112; x <= 112; x += 16) stripe.push([x, -9]);
+    for (let x = 112; x >= -112; x -= 16) stripe.push([x, 9]);
+    return { per, kick, stripe, th: 10, pitch: .3, wy: -29, wr: 10, tx: 88, tz: 27 };
+  })();
+  function drawBoard3D(k, roll, yaw) {
+    const cr = Math.cos(roll), sr = Math.sin(roll), cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(B3.pitch), sp = Math.sin(B3.pitch);
+    const P = (x, y, z) => {                                                 // roll (eixo x) → yaw (eixo y) → câmera (pitch)
+      const y1 = y * cr - z * sr, z1 = y * sr + z * cr;
+      const x2 = x * cyw + z1 * syw, z2 = -x * syw + z1 * cyw;
+      return [x2 * k, -(y1 * cp - z2 * sp) * k, y1 * sp + z2 * cp];
+    };
+    const h = B3.th / 2;
+    const top = B3.per.map(([x, z]) => P(x, B3.kick(x) + h, z)), bot = B3.per.map(([x, z]) => P(x, B3.kick(x) - h, z));
+    const nTop = cr * sp + sr * cyw * cp;                                    // normal da lixa apontando para a câmera?
+    const poly = (pts, fill, stroke) => {
+      ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
+      ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.4 * k; ctx.lineJoin = 'round'; ctx.stroke(); }
+    };
+    const under = () => {                                                    // trucks e rodinhas (as de trás primeiro)
+      const ax = P(0, 0, 1), axp = [ax[0] / k, ax[1] / k], al = Math.hypot(axp[0], axp[1]);
+      const ang = Math.atan2(axp[1], axp[0]), squash = Math.max(.32, Math.abs(ax[2]));
+      ctx.lineCap = 'round';
+      [-B3.tx, B3.tx].forEach(tx => {
+        const base = P(tx, -h, 0), hang = P(tx, B3.wy + 6, 0), l = P(tx, B3.wy, -B3.tz), r = P(tx, B3.wy, B3.tz);
+        ctx.strokeStyle = '#5d646c'; ctx.lineWidth = 7 * k; ctx.beginPath(); ctx.moveTo(base[0], base[1]); ctx.lineTo(hang[0], hang[1]); ctx.stroke();
+        ctx.strokeStyle = '#c9d0d6'; ctx.lineWidth = 4.5 * k; ctx.beginPath(); ctx.moveTo(l[0], l[1]); ctx.lineTo(r[0], r[1]); ctx.stroke();
+      });
+      const wheels = [];
+      [-B3.tx, B3.tx].forEach(tx => [-B3.tz, B3.tz].forEach(tz => wheels.push(P(tx, B3.wy, tz))));
+      wheels.sort((a, b) => a[2] - b[2]).forEach(([x, y]) => {
+        ctx.beginPath(); ctx.ellipse(x, y, B3.wr * k * (al > .05 ? squash : 1), B3.wr * k, al > .05 ? ang : 0, 0, TAU);
+        ctx.fillStyle = '#f2c41f'; ctx.fill(); ctx.strokeStyle = '#8a6100'; ctx.lineWidth = 1.4 * k; ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, 3.2 * k, 0, TAU); ctx.fillStyle = '#9aa3ab'; ctx.fill();
+      });
+      ctx.lineCap = 'butt';
+    };
+    if (nTop > 0) under();                                                   // vendo a lixa: rodinhas ficam atrás
+    // lateral do shape (madeira): cada pedaço da borda entre a lixa e o fundo
+    poly(nTop > 0 ? bot : top, '#b9814a', '#4a2a14');
+    for (let i = 0; i < top.length; i++) {
+      const j = (i + 1) % top.length;
+      poly([top[i], top[j], bot[j], bot[i]], '#c99358');
+    }
+    if (nTop > 0) {
+      poly(top, '#2b2b2e', '#141416');                                       // lixa
+    } else {
+      poly(bot, '#cf2329', '#4a1010');                                       // fundo vermelho
+      poly(B3.stripe.map(([x, z]) => P(x, B3.kick(x) - h - .2, z)), '#f5c31a');   // faixa amarela
+      under();
+    }
+  }
+  // skate único embaixo dos pés; nas manobras de flip vira o skate 3D
   function drawBoard(f, k) {
     const [dx, dy, ang] = SK.deck[f], B = SK.shape;
     ctx.save(); ctx.translate((dx - SK.cx) * k, (dy - SK.bot) * k); ctx.rotate(ang);
-    if (f === 6) {                                                           // kickflip (vira no eixo comprido) e 360 flip (vira + gira na horizontal)
-      const T = player.trick && TRICKS[player.trick], kick = (T && T.kick) || 1, shove = (T && T.shove) || 0, ph = clamp(player.spin, 0, 1);
-      const cs = Math.cos(ph * shove * TAU), sx = shove ? Math.sign(cs || 1) * Math.max(.24, Math.abs(cs)) : 1;   // de ponta o skate ainda mostra a largura
-      ctx.translate(0, B.h * .35 * k); ctx.rotate(Math.sin(ph * Math.PI) * (shove ? .2 : .35)); ctx.scale(sx, Math.cos(ph * kick * TAU)); ctx.translate(0, -B.h * .35 * k);
+    const T = player.spin >= 0 && player.trick && TRICKS[player.trick];
+    if (f === 6 && T && state === 'running') {   // kickflip / 360 flip
+      const kick = (T && T.kick) || 1, shove = (T && T.shove) || 0, ph = clamp(player.spin, 0, 1);
+      const e = .5 - .5 * Math.cos(Math.PI * ph);                            // começa e termina devagar
+      ctx.translate(0, B3.th / 2 * k); ctx.rotate(Math.sin(ph * Math.PI) * .12);
+      drawBoard3D(k, -e * kick * TAU, e * shove * TAU);
+      ctx.restore(); return;
     }
-    if (player.grind && state !== 'shop' && player.grind.g.sx) ctx.scale(player.grind.g.sx, 1);   // boardslide: skate atravessado no corrimão
+    if (player.grind && state === 'running' && player.grind.g.yaw) {        // boardslide: skate atravessado no corrimão
+      ctx.translate(0, B3.th / 2 * k); drawBoard3D(k, 0, player.grind.g.yaw); ctx.restore(); return;
+    }
     ctx.drawImage(SKATE_SHAPE, -B.w / 2 * k, -B.top * k, B.w * k, B.h * k);
     ctx.restore();
   }
+
   function drawSkater(ox, oy, tint, X) {
     const k = SP.scale, f = skaterFrame(), im = tinted(SKATE_IMG, tint), S2 = SK.size * k;
     const tilt = player.ground ? Math.sin(t * 11) * .015 : clamp(-player.vy / 2600, -.18, .22);
