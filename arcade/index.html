@@ -471,7 +471,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       src.buffer = noiseBuf; src.loop = true; f.type = 'lowpass'; f.frequency.value = 500; f.Q.value = 1.4; g.gain.value = 0;
       src.connect(f).connect(g).connect(sfxBus); src.start(); mus.roll = { g, f };
     }
-    const grinding = state === 'running' && !!player.grind, rolling = state === 'running' && skateOn() && player.ground;
+    const grinding = state === 'running' && !!player.grind, rolling = state === 'running' && wheels() && player.ground;
     mus.roll.g.gain.setTargetAtTime(rolling ? (player.slide ? .22 : .12) : 0, audio.currentTime, .06);
     mus.roll.f.frequency.setTargetAtTime(380 + (speed || 0) * .45, audio.currentTime, .2);
     // grind no corrimão: ruído longo (sem repetição audível) em banda média + zumbido grave do metal + leve "canto" metálico
@@ -707,7 +707,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   function spawn() {
     const r = Math.random(), x0 = W + 40;
     let w;
-    if (skateOn() && score > 60 && Math.random() < .3) {
+    if (wheels() && score > 60 && Math.random() < .3) {
       const q = Math.random();
       if (q < .4) {
         // corrimão (só de skate): pula em cima para fazer grind, ou por cima
@@ -847,12 +847,17 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     kickflip: { turns: 0, screw: 0, dur: .44, label: 'KICKFLIP!', color: '#ffd84a', sk: 6, kick: 1 },
     grab:     { turns: 0, screw: 0, dur: .46, label: 'GRAB!', color: '#7fd0ff', sk: 5 },
     treflip:  { turns: 0, screw: 0, dur: .54, label: '360 FLIP!', color: '#9bcb45', sk: 6, kick: 1, shove: 1 },
-    duplosk:  { turns: 0, screw: 0, dur: .66, label: '360 FLIP DUPLO!', color: '#ff6a5f', sk: 6, kick: 2, shove: 2 }
+    duplosk:  { turns: 0, screw: 0, dur: .66, label: '360 FLIP DUPLO!', color: '#ff6a5f', sk: 6, kick: 2, shove: 2 },
+    // de patinete (pose do atlas do patinete em sc; whip = voltas da base em volta da haste)
+    superman: { turns: 0, screw: 0, dur: .56, label: 'SUPERMAN!', color: '#7fd0ff', sc: 2 },
+    tailwhip: { turns: 0, screw: 0, dur: .5, label: 'TAILWHIP!', color: '#ffd84a', sc: 3, whip: 1 },
+    nohander: { turns: 0, screw: 0, dur: .5, label: 'NO HANDER!', color: '#9bcb45', sc: 4 },
+    tailwhip2: { turns: 0, screw: 0, dur: .66, label: 'TAILWHIP DUPLO!', color: '#ff6a5f', sc: 3, whip: 2 }
   };
   let lastTrick = '';
   function pickTrick() {
-    if (player.jumps >= 3) return skateOn() ? 'duplosk' : 'duplo';
-    const opts = (skateOn() ? ['kickflip', 'grab', 'treflip'] : ['mortal', 'reverso', 'parafuso']).filter(k => k !== lastTrick);
+    if (player.jumps >= 3) return scooterOn() ? 'tailwhip2' : skateOn() ? 'duplosk' : 'duplo';
+    const opts = (scooterOn() ? ['superman', 'tailwhip', 'nohander'] : skateOn() ? ['kickflip', 'grab', 'treflip'] : ['mortal', 'reverso', 'parafuso']).filter(k => k !== lastTrick);
     return (lastTrick = pick(opts));
   }
   // poses das manobras (Gemini): 0 entrando, 1 e 2 encolhido como bola, 3 abrindo, 4 parafuso de braços cruzados;
@@ -898,10 +903,17 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     { label: '5-0 GRIND!', f: 9, dy: 13, tilt: -.384, color: '#9bcb45' },
     { label: 'CROOKED!', f: 10, dy: 13, tilt: .336, color: '#f08a1c' }
   ];
+  // de patinete a base raspa no corrimão: feeble (traseira) e smith (frente) inclinam na ponta da base
+  const GRINDS_SC = [
+    { label: '50-50!', f: 0, dy: 14, color: '#ffd84a' },
+    { label: 'FEEBLE!', f: 0, dy: 14, tilt: -.2, color: '#7fd0ff' },
+    { label: 'SMITH!', f: 0, dy: 14, tilt: .2, color: '#f08a1c' },
+    { label: 'ICEPICK!', f: 4, dy: 14, tilt: -.12, color: '#9bcb45' }
+  ];
   let lastGrind = null;
   const GRIND_TRUCK = 88;                                                    // distância do truck ao meio do skate (px do atlas)
   // x na tela do ponto que raspa no corrimão (truck da frente, de trás ou o meio)
-  const grindX = () => { const g = player.grind && player.grind.g; return PX + (g && g.tilt ? Math.sign(g.tilt) * GRIND_TRUCK * SP.scale * Math.cos(player.grind.slope) : 0); };
+  const grindX = () => { const g = player.grind && player.grind.g; return PX + (g && g.tilt ? Math.sign(g.tilt) * (scooterOn() ? 62 : GRIND_TRUCK) * SP.scale * Math.cos(player.grind.slope) : 0); };
   // obstáculos de skate onde dá para andar em cima: rampa (curva que sobe) e escadaria (degraus + patamar)
   function surfaceAt(o, x) {
     const u = x - o.x;
@@ -931,7 +943,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     return -1;
   }
   function startGrind(o) {
-    const g = pick(GRINDS.filter(x => x !== lastGrind)); lastGrind = g;
+    const g = pick((scooterOn() ? GRINDS_SC : GRINDS).filter(x => x !== lastGrind)); lastGrind = g;
     const slope = o.kind === 'stairs' ? Math.atan2(o.h, o.down) : 0;
     player.grind = { o, g, t: 0, slope }; player.ground = false; player.spin = -1; player.trail = []; player.vy = 0; player.y = railTop(o, PX) - g.dy; player.jumps = 0; player.land = .6;
     popText(PX + 70, GROUND - player.y - 130, g.label, g.color); sfx.grind(); sparkle(PX + 10, GROUND - player.y - g.dy, 12, '#ffe08a');
@@ -944,7 +956,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function playerBox() {
     const sliding = player.slide && player.ground;
-    const h = sliding ? 86 : skateOn() ? 114 : 104;
+    const h = sliding ? 86 : wheels() ? 114 : 104;
     return { x1: PX - 22, x2: PX + 24, y1: GROUND - player.y - h, y2: GROUND - player.y - 3 };
   }
   function hits(o, p) {
@@ -964,7 +976,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     state = 'dying'; hitstop = .12; shake = 14;
     comboEnd(false); player.grind = null; player.slope = 0; player.stairDrop = 0; player.vy = 640; player.ground = false; player.deadT = 0; player.landedDead = false; player.spin = -1;
     sparkle(PX + 20, GROUND - player.y - 50, 14, '#ffffff'); sfx.hit(); skills = {};
-    if (skateOn()) boardFly = { x: PX, y: GROUND - player.y - 8, vx: 260, vy: -520, r: 0, vr: 9 };
+    if (wheels()) boardFly = { x: PX, y: GROUND - player.y - 8, vx: 260, vy: -520, r: 0, vr: 9, scooter: scooterOn() };
     loja.carteira += caps; salvarLoja();                                      // tampinhas da partida vão para a carteira
     if (score > best) { best = score; newBest = true; try { localStorage.setItem('jabotiRunBest', String(best)); } catch (e) {} }
   }
@@ -1018,7 +1030,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       if (player.buffer > 0 && (player.ground || player.coyote > 0) && player.jumps === 0) jump();
 
       let floor = 0;
-      if (skateOn()) {
+      if (wheels()) {
         floor = floorAt(PX);
         if (!player.grind && floorAt(PX + 18) > player.y + 14) {            // bateu de frente num degrau
           const o = obstacles.find(o => o.kind === 'stairs' && surfaceAt(o, PX + 18) > player.y + 14);
@@ -1051,15 +1063,15 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
         if (hold && player.vy > 0 && player.jumps === 1) g *= .62;
         if (duckHeld) g *= 2.6;
         player.vy -= g * dt; player.y += player.vy * dt;
-        if (skateOn() && player.vy < 0) for (const o of obstacles) {      // caiu em cima de um corrimão: grind
+        if (wheels() && player.vy < 0) for (const o of obstacles) {      // caiu em cima de um corrimão: grind
           const rt = o.dead ? -1 : railTop(o, PX);
           if (rt > 0 && prevY >= rt - 4 && player.y < rt - 4) { startGrind(o); break; }
         }
         if (!player.grind && player.y <= floor) {
           const fall = player.stairDrop;
           player.y = floor; player.vy = 0; player.ground = true; player.jumps = 0; player.spin = -1;
-          player.land = 1; dust(PX, GROUND - floor, 9, 1.2); if (skateOn()) sfx.skland();
-          if (fall && skateOn()) { player.stairDrop = 0; bonus += 25 * mult(); popText(PX + 60, GROUND - 120, 'DROP! +' + 25 * mult(), '#ffd84a'); comboAdd('DROP', 25 * mult()); }
+          player.land = 1; dust(PX, GROUND - floor, 9, 1.2); if (wheels()) sfx.skland();
+          if (fall && wheels()) { player.stairDrop = 0; bonus += 25 * mult(); popText(PX + 60, GROUND - 120, 'DROP! +' + 25 * mult(), '#ffd84a'); comboAdd('DROP', 25 * mult()); }
         }
       }
       if (player.spin >= 0) {
@@ -1254,7 +1266,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     { id: 'arcoiris', nome: 'ARCO-ÍRIS', preco: 700, fx: 'arcoiris' }
   ];
   // locomoção (a pé ou de skate), estampas do skate e rastros atrás do mascote
-  const LOCS = [{ id: 'pe', nome: 'A PÉ', preco: 0 }, { id: 'skate', nome: 'SKATE', preco: 400 }];
+  const LOCS = [{ id: 'pe', nome: 'A PÉ', preco: 0 }, { id: 'skate', nome: 'SKATE', preco: 400 }, { id: 'patinete', nome: 'PATINETE', preco: 450 }];
   const SHAPES = [
     { id: 'sh_classico', nome: 'CLÁSSICO', preco: 0, base: '#cf2329', stripe: '#f5c31a' },
     { id: 'sh_jaboti', nome: 'JABOTI', preco: 200, base: '#d7262b', stripe: '#ffd23a', pat: 'jaboti' },
@@ -1305,6 +1317,14 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     deck: [[195, 322, 0], [200, 322, 0], [205, 322, 0], [190, 322, 0], [222, 308, -.31], [195, 303, 0], [232, 342, 0],
       [208, 322, 0], [225, 322, 0], [196, 322, 0], [225, 322, 0]] };   // 7–10: grinds (50-50, nosegrind, 5-0, crooked)
   const skateOn = () => loja.loc === 'skate' && ok(SKATE_IMG) && ok(SKATE_SHAPE);
+  // patinete: atlas de 5 células de 400 px só com o mascote (0 andando, 1 empurrando, 2 superman, 3 tailwhip, 4 no-hander);
+  // o patinete é desenhado pelo código em 3D (drawScooter). deck = [x, y do topo da base, ângulo] e bar = guidão (entre as mãos), na célula
+  const SCOOT_IMG = new Image(); SCOOT_IMG.src = 'assets/mascote-patinete.webp';
+  const SC = { size: 400, cx: 200, bot: 353, bar: [75, 93],
+    poses: [{ deck: [209, 322, 0], bar: [284, 229] }, { deck: [231, 322, 0], bar: [295, 208] }, { deck: null, bar: [306, 254] },
+      { deck: null, bar: [264, 229] }, { deck: [187, 322, 0], bar: [282, 150] }] };
+  const scooterOn = () => loja.loc === 'patinete' && ok(SCOOT_IMG);
+  const wheels = () => skateOn() || scooterOn();                             // sobre rodas: obstáculos, grind, rampas…
   // estampa do skate: a imagem de lado é recolorida (faixa vermelha → cor base, faixa amarela → cor da faixa)
   const curShape = () => SHAPES.find(x => x.id === loja.shape) || SHAPES[0];
   const shapeCache = {};
@@ -1419,7 +1439,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   function drawMascot() {
     if (useVector || !ok(SPRITES)) { drawMascotVector(); return; }
     if (ok(POSES_IMG)) {
-      if (state === 'ready' && !accSheet() && !skateOn()) {        // menu inicial: acenando com a garrafa (com acessório ou skate, usa a folha dele)
+      if (state === 'ready' && !accSheet() && !wheels()) {        // menu inicial: acenando com a garrafa (com acessório ou skate, usa a folha dele)
         ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(PX, GROUND + 3, 30, 5, 0, 0, TAU); ctx.fill();
         drawPose(1, PX, GROUND - Math.abs(Math.sin(t * 2.4)) * 4, .56, Math.sin(t * 2.4) * .03);
         return;
@@ -1443,9 +1463,10 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     // sombra
     const sh = clamp(1 - player.y / 260, .3, 1);
     ctx.fillStyle = 'rgba(0,0,0,.2)';
-    const fl = skateOn() && state === 'running' ? floorAt(PX) : 0;          // sombra em cima do patamar/rampa
+    const fl = wheels() && state === 'running' ? floorAt(PX) : 0;          // sombra em cima do patamar/rampa
     ctx.beginPath(); ctx.ellipse(ox, GROUND - fl + 3, (dead && player.landedDead ? 42 : 28) * sh, 5 * sh, 0, 0, TAU); ctx.fill();
 
+    if (scooterOn() && !dead) { drawScooterRider(ox, oy, tint); return; }
     if (skateOn() && !dead) { drawSkater(ox, oy, tint, X); return; }
     if (boardFly && dead) drawBoardFly();
     if (state === 'running' && player.ground && player.slide && ok(SLIDE_IMG)) {
@@ -1636,8 +1657,107 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       dust(ox - 92 * k, oy, 1, .5); if (Math.random() < .5) dust(ox + 80 * k, oy, 1, .5);
     }
   }
+  // ---------------- patinete desenhado em 3D ----------------
+  // coordenadas do patinete: x para frente, y para cima, z para perto da câmera (px da célula de 400, origem no topo da base)
+  const SCG = { half: 62, th: 9, w: 15, rear: -73, front: 86, ay: -12, r: 19, hx: 80, hy: 42, pitch: .3 };
+  function drawScooter(k, deck, bar, yaw = 0) {
+    const [dcx, dcy, ang] = deck, ca = Math.cos(ang || 0), sa = Math.sin(ang || 0), cp = Math.cos(SCG.pitch), sp = Math.sin(SCG.pitch);
+    const cyw = Math.cos(yaw), syw = Math.sin(yaw);
+    const P = (x, y, z, rot) => {                                            // rot: parte que gira no tailwhip (base, pescoço, roda de trás)
+      if (rot) { const dx = x - SCG.hx; x = SCG.hx + dx * cyw + z * syw; z = -dx * syw + z * cyw; }
+      const Y = y * cp - z * sp, D = y * sp + z * cp, cxl = x, cyl = -Y;
+      return [((dcx + cxl * ca - cyl * sa) - SC.cx) * k, ((dcy + cxl * sa + cyl * ca) - SC.bot) * k, D];
+    };
+    const line = (pts, col, w, cap = 'round') => { ctx.lineCap = cap; ctx.lineJoin = 'round'; ctx.strokeStyle = col; ctx.lineWidth = w * k; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); };
+    const poly = (pts, fill, stroke) => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.3 * k; ctx.stroke(); } };
+    const wheel = (x, rot) => {
+      const [wx, wy] = P(x, SCG.ay, 0, rot), sq = rot ? Math.max(.22, Math.abs(cyw)) : 1, r = SCG.r * k;
+      ctx.beginPath(); ctx.ellipse(wx, wy, r * sq, r, 0, 0, TAU); ctx.fillStyle = '#1b1b1e'; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5 * k; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(wx, wy, r * .6 * sq, r * .6, 0, 0, TAU); ctx.fillStyle = '#f2c41f'; ctx.fill(); ctx.strokeStyle = '#9a7400'; ctx.lineWidth = 1.2 * k; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(wx, wy, r * .22 * sq, r * .22, 0, 0, TAU); ctx.fillStyle = '#b9c0c6'; ctx.fill();
+    };
+    // barra do guidão no espaço local (o ponto da célula vira x/y do patinete)
+    let bl;
+    if (bar) { const dx = bar[0] - dcx, dy = bar[1] - dcy; bl = [dx * ca + dy * sa, -(-dx * sa + dy * ca) / cp]; }
+    else bl = [SC.bar[0], SC.bar[1] / cp];
+    const head = P(SCG.hx, SCG.hy, 0), hb = P(bl[0], bl[1], 0);
+    wheel(SCG.rear, true); wheel(SCG.front, false);
+    line([P(SCG.hx + 2, SCG.hy - 4, 0), P(SCG.front, SCG.ay, 0)], '#4e565e', 8); line([P(SCG.hx + 2, SCG.hy - 4, 0), P(SCG.front, SCG.ay, 0)], '#c9d0d6', 5);   // garfo
+    // base (caixa): faces viradas para a câmera
+    const X0 = -SCG.half, X1 = SCG.half, Y0 = -SCG.th, Y1 = 0, Z0 = -SCG.w, Z1 = SCG.w;
+    const faces = [
+      { n: [0, 1, 0], p: [[X0, Y1, Z0], [X1, Y1, Z0], [X1, Y1, Z1], [X0, Y1, Z1]], c: '#2b2b2e' },
+      { n: [0, -1, 0], p: [[X0, Y0, Z0], [X1, Y0, Z0], [X1, Y0, Z1], [X0, Y0, Z1]], c: '#a3151b' },
+      { n: [0, 0, 1], p: [[X0, Y0, Z1], [X1, Y0, Z1], [X1, Y1, Z1], [X0, Y1, Z1]], c: '#d7262b', side: Z1 },
+      { n: [0, 0, -1], p: [[X0, Y0, Z0], [X1, Y0, Z0], [X1, Y1, Z0], [X0, Y1, Z0]], c: '#d7262b', side: Z0 },
+      { n: [1, 0, 0], p: [[X1, Y0, Z0], [X1, Y0, Z1], [X1, Y1, Z1], [X1, Y1, Z0]], c: '#b81d22' },
+      { n: [-1, 0, 0], p: [[X0, Y0, Z0], [X0, Y0, Z1], [X0, Y1, Z1], [X0, Y1, Z0]], c: '#b81d22' }
+    ];
+    faces.forEach(F => {
+      const [nx, ny, nz] = F.n, nz2 = -nx * syw + nz * cyw;
+      if (ny * sp + nz2 * cp <= .002) return;
+      poly(F.p.map(q => P(q[0], q[1], q[2], true)), F.c, '#4a0d10');
+      if (F.side != null) poly([[-50, -6.5], [50, -6.5], [50, -3], [-50, -3]].map(([x, y]) => P(x, y, F.side, true)), '#f5c31a');   // faixa amarela
+    });
+    line([P(SCG.half - 6, -3, 0, true), P(SCG.hx, SCG.hy, 0, true)], '#5a0c10', 11); line([P(SCG.half - 6, -3, 0, true), P(SCG.hx, SCG.hy, 0, true)], '#e0373c', 8);   // pescoço vermelho
+    const fend = []; for (let i = 0; i <= 8; i++) { const a = .35 + i / 8 * 2.3; fend.push(P(SCG.rear + Math.cos(a) * 25, SCG.ay + Math.sin(a) * 25, 0, true)); }
+    line(fend, '#5a0c10', 7); line(fend, '#e0373c', 4.5);                     // para-lama de trás
+    line([head, hb], '#5e6870', 8); line([head, hb], '#d9dfe4', 5); line([head, hb], 'rgba(255,255,255,.7)', 1.5);   // haste
+    poly([[-5, 4], [5, 4], [5, -4], [-5, -4]].map(([x, y]) => [head[0] + x * k, head[1] + y * k]), '#c9d0d6', '#4e565e');   // abraçadeira
+    const g0 = [hb[0] - 21 * k, hb[1]], g1 = [hb[0] + 21 * k, hb[1]];        // guidão em T (manoplas vermelhas)
+    line([g0, g1], '#5e6870', 7); line([g0, g1], '#d9dfe4', 4.5);
+    line([[g0[0], g0[1]], [g0[0] + 9 * k, g0[1]]], '#7a0f13', 9); line([[g0[0], g0[1]], [g0[0] + 9 * k, g0[1]]], '#e0373c', 6.5);
+    line([[g1[0], g1[1]], [g1[0] - 9 * k, g1[1]]], '#7a0f13', 9); line([[g1[0], g1[1]], [g1[0] - 9 * k, g1[1]]], '#e0373c', 6.5);
+    ctx.lineCap = 'butt';
+  }
+  // pose f do atlas do patinete com o patinete embaixo (origem do contexto = chão, sob o meio da célula)
+  function drawScooterPose(f, k, tintKey, yaw = 0, squash = 1) {
+    const P0 = SC.poses[f] || SC.poses[0];
+    let bar = P0.bar, deck = P0.deck || [P0.bar[0] - SC.bar[0], P0.bar[1] + SC.bar[1], 0];
+    if (squash !== 1 && bar) bar = [bar[0], deck[1] - (deck[1] - bar[1]) * squash];
+    drawScooter(k, deck, bar, yaw);
+    if (!ok(SCOOT_IMG)) return;
+    const S2 = SC.size * k, im = tinted(SCOOT_IMG, tintKey);
+    ctx.save();
+    if (squash !== 1) { const dk = (SC.bot - deck[1]) * k; ctx.translate(0, -dk); ctx.scale(1, squash); ctx.translate(0, dk); }
+    ctx.drawImage(im, f * SC.size, 0, SC.size, SC.size, -SC.cx * k, -SC.bot * k, S2, S2);
+    ctx.restore();
+  }
+  function scooterFrame() {
+    if (state === 'ready' || state === 'shop') return Math.floor(t * .8) % 2;
+    if (player.grind) return player.grind.g.f;
+    if (player.ground) { if (player.slide) return 0; const c = (runTime || t) % 3.2; return c < .5 ? 1 : 0; }
+    if (player.spin >= 0 && player.trick && TRICKS[player.trick].sc != null) return TRICKS[player.trick].sc;
+    return 0;
+  }
+  function drawScooterRider(ox, oy, tint) {
+    const k = SP.scale, f = scooterFrame(), T = player.spin >= 0 && player.trick && TRICKS[player.trick];
+    const tilt = player.ground || player.grind ? 0 : clamp(-player.vy / 2600, -.18, .22);
+    const bob = player.ground && state === 'running' ? Math.abs(Math.sin(t * 22)) * 1.2 : 0;
+    const yaw = T && T.whip ? (.5 - .5 * Math.cos(Math.PI * clamp(player.spin, 0, 1))) * T.whip * TAU : 0;
+    const squash = state === 'running' && player.ground && player.slide ? .74 : 1;
+    const draw = (x, y, r, a) => {
+      ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y - bob);
+      if (player.grind && state === 'running') {                               // grind: inclina na descida e na ponta da base que raspa
+        const g = player.grind.g, P0 = SC.poses[f] || SC.poses[0], dk = P0.deck || SC.poses[0].deck; ctx.rotate(player.grind.slope);
+        if (g.tilt) { const tx = (dk[0] - SC.cx + Math.sign(g.tilt) * SCG.half) * k, ty = (dk[1] + SCG.th - SC.bot) * k; ctx.translate(tx, ty); ctx.rotate(g.tilt); ctx.translate(-tx, -ty); }
+      } else if (player.ground && player.slope && state === 'running') ctx.rotate(-player.slope);
+      if (r) { const fy = (SC.bot - 216) * k; ctx.translate(0, -fy); ctx.rotate(r); ctx.translate(0, fy); }
+      drawScooterPose(f, k, tint, yaw, squash);
+      ctx.restore();
+    };
+    if (player.spin >= 0) {                                                  // rastro da manobra
+      const tr = player.trail || (player.trail = []);
+      if (state === 'running' && !ghostPass) { tr.forEach(g => g.x -= speed / 60 * .55); tr.push({ x: ox, y: oy, r: tilt }); if (tr.length > 5) tr.shift(); }
+      tr.slice(0, -1).forEach((g, i, a) => draw(g.x, g.y, g.r, .07 + .2 * (i + 1) / a.length));
+    } else if (player.trail) player.trail.length = 0;
+    draw(ox, oy, tilt, 1);
+    if (state === 'running' && player.ground && !ghostPass && Math.random() < .35) { dust(ox + (SCG.rear + 9) * k, oy, 1, .5); if (Math.random() < .5) dust(ox + (SCG.front + 9) * k, oy, 1, .5); }
+  }
   function drawBoardFly() {
-    const b = boardFly, k = SP.scale, B = SK.shape; if (!ok(SKATE_SHAPE)) return;
+    const b = boardFly, k = SP.scale, B = SK.shape;
+    if (b.scooter) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); drawScooter(k, [SC.cx, SC.bot - 31, 0], null, 0, -10); ctx.restore(); return; }
+    if (!ok(SKATE_SHAPE)) return;
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.drawImage(shapeImg(), -B.w / 2 * k, -B.h / 2 * k, B.w * k, B.h * k); ctx.restore();
   }
 
@@ -3193,7 +3313,10 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     if (loja.rastro) { ctx.save(); ctx.translate(pv - 62, 240); ctx.scale(1.4, 1.4); drawTrailIcon(loja.rastro, 0, 0, true); ctx.restore(); }
     if (SKp.fx === 'galaxia') for (let i = 0; i < 5; i++) { const an = t * 1.6 + i * TAU / 5; star(pv + Math.cos(an) * 60, 220 + Math.sin(an) * 26, 3, '#ffffff'); }
     if (SKp.fx === 'arcoiris' && 'filter' in ctx) ctx.filter = `hue-rotate(${(t * 140) % 360}deg) saturate(1.3)`;
-    if (skateOn()) {
+    if (scooterOn()) {
+      const z = .62, fr = Math.floor(t * 1.2) % 2;
+      ctx.save(); ctx.translate(pv, 310); drawScooterPose(fr, z, skinKey()); ctx.restore();
+    } else if (skateOn()) {
       const z = .62, fr = Math.floor(t * 1.2) % 2;
       ctx.save(); ctx.translate(pv, 310); drawBoard(fr, z); ctx.restore();
       ctx.drawImage(tinted(SKATE_IMG, skinKey()), fr * SK.size, 0, SK.size, SK.size, pv - SK.cx * z, 310 - SK.bot * z, SK.size * z, SK.size * z);
@@ -3246,6 +3369,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       ctx.drawImage(tinted(sh, skinKey()), (fr % 8) * 256 + 50, Math.floor(fr / 8) * 256 + 20, 156, 140, x - 156 * z / 2, y - 140 * z / 2 - 4, 156 * z, 140 * z);
     });
     else if (shopTab === 'locomocao') grid(LOCS, 'loc', loja.loc, (it, x, y) => {
+      if (it.id === 'patinete') { ctx.translate(x - 4, y + 24); drawScooter(.3, [SC.cx, SC.bot - 31, 0], null, Math.sin(t * 1.2) * .5, 0); return; }
       if (it.id === 'skate') { if (ok(SKATE_ICON)) { const w = 74, h = w * SKATE_ICON.naturalHeight / SKATE_ICON.naturalWidth; ctx.drawImage(SKATE_ICON, x - w / 2, y - h / 2 - 2, w, h); } return; }
       if (!ok(SPRITES)) return; const fr = Math.floor(t * 10) % 10, z = .3;   // correndo
       ctx.drawImage(tinted(SPRITES, skinKey()), (fr % 8) * 256, Math.floor(fr / 8) * 256, 256, 256, x - 128 * z, y + 26 - 246 * z, 256 * z, 256 * z);
@@ -3478,11 +3602,11 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   // decodifica todas as imagens já no início (as folhas dos poderes têm 2400×900);
   // sem isso o primeiro uso de cada uma trava o jogo por uma fração de segundo
   const warmCtx = document.createElement('canvas').getContext('2d');
-  [...Object.values(IMG), ...Object.values(SCENE), BOTTLES, SPRITES, LATA_IMG, SLIDE_IMG, MORTAL_IMG, POSES_IMG, GAS_IMG, SUN_IMG, MOON_IMG, CLOUDS_IMG, OUTDOOR_NIGHT, DRONE_IMG, FABRICA_NIGHT, FG_IMG, ...Object.values(ACC_SHEET), ...Object.values(ACC_SLIDE), ...Object.values(TRECHO), SKATE_IMG, SKATE_ICON, SKATE_SHAPE]
+  [...Object.values(IMG), ...Object.values(SCENE), BOTTLES, SPRITES, LATA_IMG, SLIDE_IMG, MORTAL_IMG, POSES_IMG, GAS_IMG, SUN_IMG, MOON_IMG, CLOUDS_IMG, OUTDOOR_NIGHT, DRONE_IMG, FABRICA_NIGHT, FG_IMG, ...Object.values(ACC_SHEET), ...Object.values(ACC_SLIDE), ...Object.values(TRECHO), SKATE_IMG, SKATE_ICON, SKATE_SHAPE, SCOOT_IMG]
     .forEach(im => (im.decode ? im.decode() : Promise.resolve()).then(() => warmCtx.drawImage(im, 0, 0, 1, 1)).catch(() => {}));
   // prepara as versões coloridas do mascote aos poucos, uma por vez, para a primeira garrafa não travar o jogo
   const tintJobs = [];
-  const warmAcc = () => { const sh = loja.loc === 'skate' ? SKATE_IMG : loja.acc && ACC_SHEET[loja.acc]; if (sh) Object.keys(POWER_TINT).forEach(k => tintJobs.unshift([sh, k])); };
+  const warmAcc = () => { const sh = loja.loc === 'skate' ? SKATE_IMG : loja.loc === 'patinete' ? SCOOT_IMG : loja.acc && ACC_SHEET[loja.acc]; if (sh) Object.keys(POWER_TINT).forEach(k => tintJobs.unshift([sh, k])); };
   if (skinKey()) [SPRITES, SLIDE_IMG, MORTAL_IMG, POSES_IMG].forEach(im => tintJobs.push([im, skinKey()]));   // cor comprada primeiro
   warmAcc();
   Object.keys(POWER_TINT).forEach(k => [SPRITES, SLIDE_IMG, MORTAL_IMG].forEach(im => tintJobs.push([im, k])));
