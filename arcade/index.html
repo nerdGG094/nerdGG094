@@ -390,6 +390,12 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       noise(sfxBus, t, .5, { ftype: 'bandpass', freq: 800, freqTo: 6000, q: 1, vol: .06 }); }),          // garrafa abrindo (fsss)
     smash: S(t => { noise(sfxBus, t, .2, { ftype: 'lowpass', freq: 2500, freqTo: 300, vol: .25 }); tone(sfxBus, t, 160, .16, { type: 'square', vol: .06, slide: .5, cut: 1200 }); }),
     shield: S(t => { tone(sfxBus, t, 880, .25, { type: 'triangle', vol: .06, slide: .5 }); tone(sfxBus, t + .05, 440, .3, { type: 'sine', vol: .06, slide: .5 }); noise(sfxBus, t, .3, { freq: 3000, vol: .06 }); }),
+    grind: S(t => { tone(sfxBus, t, 1480, .22, { type: 'triangle', vol: .05, slide: .97 }); tone(sfxBus, t, 2210, .16, { type: 'sine', vol: .025 });   // "tlim" ao encaixar no corrimão
+      noise(sfxBus, t, .07, { ftype: 'bandpass', freq: 1800, q: 3, vol: .12 }); tone(sfxBus, t, 110, .1, { type: 'square', vol: .04, slide: .6, cut: 700 }); }),
+    combo: n => { if (muted || !ensureAudio()) return; const t = audio.currentTime, m = 72 + Math.min(n, 8) * 2;   // sobe a cada manobra do combo
+      tone(sfxBus, t, hz(m), .1, { type: 'square', vol: .03, cut: 4000 }); tone(sfxBus, t + .06, hz(m + 7), .14, { type: 'triangle', vol: .04 }); },
+    comboEnd: S(t => { [76, 80, 83, 88, 92].forEach((m, k) => tone(sfxBus, t + k * .055, hz(m), .14, { type: 'square', vol: .035, cut: 4500 })); tone(sfxBus, t + .28, hz(95), .4, { type: 'triangle', vol: .05 }); }),
+    comboLost: S(t => { tone(sfxBus, t, hz(70), .18, { type: 'square', vol: .03, slide: .7, cut: 1500 }); tone(sfxBus, t + .12, hz(63), .3, { type: 'square', vol: .03, slide: .6, cut: 1200 }); }),
     skland: S(t => { noise(sfxBus, t, .09, { ftype: 'lowpass', freq: 1800, vol: .3 }); tone(sfxBus, t, 120, .08, { type: 'square', vol: .06, slide: .6, cut: 900 }); }),
     click: S(t => { tone(sfxBus, t, hz(84), .05, { type: 'square', vol: .03, cut: 3000 }); tone(sfxBus, t + .04, hz(91), .07, { type: 'square', vol: .025, cut: 3000 }); }),
     buy: S(t => { [79, 84, 88, 91, 96].forEach((m, k) => tone(sfxBus, t + k * .06, hz(m), .14, { type: 'square', vol: .03, cut: 5000 })); })
@@ -466,8 +472,28 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       src.connect(f).connect(g).connect(sfxBus); src.start(); mus.roll = { g, f };
     }
     const grinding = state === 'running' && !!player.grind, rolling = state === 'running' && skateOn() && player.ground;
-    mus.roll.g.gain.setTargetAtTime(grinding ? .3 : rolling ? (player.slide ? .22 : .12) : 0, audio.currentTime, .04);
-    mus.roll.f.frequency.setTargetAtTime(grinding ? 3200 : 380 + (speed || 0) * .45, audio.currentTime, grinding ? .02 : .2);
+    mus.roll.g.gain.setTargetAtTime(rolling ? (player.slide ? .22 : .12) : 0, audio.currentTime, .06);
+    mus.roll.f.frequency.setTargetAtTime(380 + (speed || 0) * .45, audio.currentTime, .2);
+    // grind no corrimão: ruído longo (sem repetição audível) em banda média + zumbido grave do metal + leve "canto" metálico
+    if (!mus.grind) {
+      const n = audio.sampleRate * 3, buf = audio.createBuffer(1, n, audio.sampleRate), d = buf.getChannelData(0);
+      let b = 0; for (let i = 0; i < n; i++) { b = b * .6 + (Math.random() * 2 - 1) * .4; d[i] = b; }   // ruído mais "marrom" (menos chiado)
+      const src = audio.createBufferSource(); src.buffer = buf; src.loop = true;
+      const bp = audio.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 2.2;
+      const lp = audio.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+      const g = audio.createGain(); g.gain.value = 0;
+      src.connect(bp).connect(lp).connect(g).connect(sfxBus); src.start();
+      const hum = audio.createOscillator(), hg = audio.createGain(); hum.type = 'triangle'; hum.frequency.value = 92; hg.gain.value = 0;
+      hum.connect(hg).connect(sfxBus); hum.start();
+      const ring = audio.createOscillator(), rg = audio.createGain(); ring.type = 'sine'; ring.frequency.value = 1240; rg.gain.value = 0;
+      ring.connect(rg).connect(sfxBus); ring.start();
+      mus.grind = { g, bp, hg, rg, ring };
+    }
+    const G3 = mus.grind, now = audio.currentTime, wob = Math.sin(now * 23) * .5 + Math.sin(now * 37) * .5;
+    G3.g.gain.setTargetAtTime(grinding ? .16 + wob * .03 : 0, now, grinding ? .03 : .05);
+    G3.bp.frequency.setTargetAtTime(800 + (speed || 0) * .35 + wob * 90, now, .05);
+    G3.hg.gain.setTargetAtTime(grinding ? .05 : 0, now, .05);
+    G3.rg.gain.setTargetAtTime(grinding ? .006 + Math.max(0, wob) * .006 : 0, now, .04);
     const want = muted ? null : musicTarget();
     if (want !== mus.song) {
       mus.song = want; mus.step = 0; mus.loops = 0; mus.next = audio.currentTime + .06;
@@ -521,12 +547,29 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     lx: 0, ly: .2, brow: 0, eye: 1
   };
 
+  // combo: manobras seguidas sem ficar no chão (até 0,6 s) multiplicam os pontos delas (x2, x3... até x5)
+  let combo = { n: 0, pts: 0, ground: 0, t0: -9, names: [] }, comboMsg = null;
+  const COMBO_MAX = 5, COMBO_GRACE = .6;
+  function comboAdd(name, p) {
+    combo.n++; combo.pts += p; combo.ground = 0; combo.t0 = t; combo.names.push(name); if (combo.names.length > 4) combo.names.shift();
+    if (combo.n >= 2) sfx.combo(combo.n);
+  }
+  function comboEnd(ok) {
+    const n = combo.n, m = Math.min(n, COMBO_MAX);
+    if (n >= 2 && ok) {
+      const extra = combo.pts * (m - 1); bonus += extra;
+      comboMsg = { text: 'COMBO x' + m + '!', sub: '+' + extra, life: 1.6, color: m >= 4 ? '#ff6a5f' : m >= 3 ? '#ffd23a' : '#7fd0ff' };
+      sfx.comboEnd(); confetti(PX + 40, GROUND - player.y - 90, 10 + m * 4);
+    } else if (n >= 2) { comboMsg = { text: 'COMBO PERDIDO', sub: '', life: 1.2, color: '#ff6a5f' }; sfx.comboLost(); }
+    combo = { n: 0, pts: 0, ground: 0, t0: -9, names: [] };
+  }
   function reset() {
     player = { y: 0, vy: 0, ground: true, jumps: 0, coyote: 0, buffer: 0, spin: -1, land: 0, stretch: 0, dx: 0, drop: 0, deadT: 0, landedDead: false, rotDead: 0, slide: false, blink: 2, grind: null };
     pose = { ...IDLE_POSE };
     obstacles = []; coins = []; particles = []; texts = [];
     speed = START_SPEED; dist = 0; score = 0; bonus = 0; caps = 0; gap = 600; runTime = 0; rankSent = null; boardFly = null;
     flash = 0; shake = 0; hitstop = 0; newBest = false; runPhase = 0; stepIndex = 0; celebrate = 0;
+    combo = { n: 0, pts: 0, ground: 0, t0: -9, names: [] }; comboMsg = null;
     skills = {}; items = []; skillTimer = 3.5; lataTimer = 22 + Math.random() * 10; invuln = 0; pts = 0; vel = START_SPEED;
   }
   // profundidade: d = 0 bem longe (pequeno, lento, transparente) até 1 perto (grande, rápido)
@@ -844,6 +887,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     player.trick = pickTrick(); player.trail = [];
     const T = TRICKS[player.trick];
     popText(PX + 70, Math.max(70, GROUND - player.y - 110), T.label, T.color);
+    const tp = (player.trick === 'duplo' || player.trick === 'duplosk' ? 50 : 25) * mult(); bonus += tp; comboAdd(T.label.replace('!', ''), tp);
     ring(PX, GROUND - player.y - 40, '#ffffff'); sparkle(PX, GROUND - player.y - 30, 8, '#ffffff'); sfx.djump();
   }
   // grind no corrimão (só de skate): cai em cima dele vindo de um pulo
@@ -890,13 +934,13 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     const g = pick(GRINDS.filter(x => x !== lastGrind)); lastGrind = g;
     const slope = o.kind === 'stairs' ? Math.atan2(o.h, o.down) : 0;
     player.grind = { o, g, t: 0, slope }; player.ground = false; player.spin = -1; player.trail = []; player.vy = 0; player.y = railTop(o, PX) - g.dy; player.jumps = 0; player.land = .6;
-    popText(PX + 70, GROUND - player.y - 130, g.label, g.color); sfx.skland(); sparkle(PX + 10, GROUND - player.y - g.dy, 12, '#ffe08a');
+    popText(PX + 70, GROUND - player.y - 130, g.label, g.color); sfx.grind(); sparkle(PX + 10, GROUND - player.y - g.dy, 12, '#ffe08a');
   }
   function endGrind(hop) {
     const G2 = player.grind; if (!G2) return;
     player.grind = null; player.ground = false; player.jumps = 1; player.vy = hop ? 260 : 0;
     const pts = (30 + Math.floor(G2.t * 60)) * mult(); bonus += pts;
-    popText(PX + 40, GROUND - player.y - 100, '+' + pts, G2.g.color);
+    popText(PX + 40, GROUND - player.y - 100, '+' + pts, G2.g.color); comboAdd(G2.g.label.replace('!', ''), pts);
   }
   function playerBox() {
     const sliding = player.slide && player.ground;
@@ -918,7 +962,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function die() {
     state = 'dying'; hitstop = .12; shake = 14;
-    player.grind = null; player.slope = 0; player.stairDrop = 0; player.vy = 640; player.ground = false; player.deadT = 0; player.landedDead = false; player.spin = -1;
+    comboEnd(false); player.grind = null; player.slope = 0; player.stairDrop = 0; player.vy = 640; player.ground = false; player.deadT = 0; player.landedDead = false; player.spin = -1;
     sparkle(PX + 20, GROUND - player.y - 50, 14, '#ffffff'); sfx.hit(); skills = {};
     if (skateOn()) boardFly = { x: PX, y: GROUND - player.y - 8, vx: 260, vy: -520, r: 0, vr: 9 };
     loja.carteira += caps; salvarLoja();                                      // tampinhas da partida vão para a carteira
@@ -988,7 +1032,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
             player.ground = false; player.jumps = 1; player.coyote = 0; player.slope = 0;
             if (o && o.kind === 'ramp') {
               player.vy = 900 + speed * .12; player.stretch = 1; sfx.djump(); dust(PX, GROUND - player.y, 8, 1.2);
-              bonus += 20 * mult(); popText(PX + 70, GROUND - player.y - 130, 'RAMPA! +' + 20 * mult(), '#7fd0ff'); ring(PX, GROUND - player.y - 30, '#ffffff');
+              bonus += 20 * mult(); popText(PX + 70, GROUND - player.y - 130, 'RAMPA! +' + 20 * mult(), '#7fd0ff'); comboAdd('RAMPA', 20 * mult()); ring(PX, GROUND - player.y - 30, '#ffffff');
             } else if (o && railTop(o, PX) > 0) {                          // ollie direto para o corrimão: desce a escada no grind
               sfx.jump(); startGrind(o);
             } else { player.vy = 330; player.stairDrop = 1; sfx.jump(); }
@@ -1015,7 +1059,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
           const fall = player.stairDrop;
           player.y = floor; player.vy = 0; player.ground = true; player.jumps = 0; player.spin = -1;
           player.land = 1; dust(PX, GROUND - floor, 9, 1.2); if (skateOn()) sfx.skland();
-          if (fall && skateOn()) { player.stairDrop = 0; bonus += 25 * mult(); popText(PX + 60, GROUND - 120, 'DROP! +' + 25 * mult(), '#ffd84a'); }
+          if (fall && skateOn()) { player.stairDrop = 0; bonus += 25 * mult(); popText(PX + 60, GROUND - 120, 'DROP! +' + 25 * mult(), '#ffd84a'); comboAdd('DROP', 25 * mult()); }
         }
       }
       if (player.spin >= 0) {
@@ -1026,6 +1070,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
         }
       }
 
+      if (combo.n && player.ground && !player.grind) { combo.ground += dt; if (combo.ground > COMBO_GRACE) comboEnd(true); }
+      if (comboMsg) { comboMsg.life -= realDt; if (comboMsg.life <= 0) comboMsg = null; }
       const wasSliding = player.slide;
       player.slide = duckHeld && player.ground;
       if (player.slide && !wasSliding) { sfx.slide(); dust(PX + 10, GROUND, 6, 1.4); }
@@ -2795,6 +2841,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       ctx.textAlign = 'left'; ctx.fillStyle = ink; ctx.fillText('× ' + caps, 48, 16);
       drawSkillHud(ink);
     }
+    drawCombo();
     texts.forEach(x => {
       ctx.globalAlpha = clamp(x.life * 2, 0, 1);
       ctx.font = '900 18px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -2802,6 +2849,30 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       ctx.fillStyle = x.color; ctx.fillText(x.text, x.x, x.y);
       ctx.globalAlpha = 1;
     });
+  }
+  // contador do combo no alto da tela (pulsa a cada manobra) e o resultado quando fecha
+  function drawCombo() {
+    const cx = W / 2;
+    if (combo.n >= 2 && state === 'running') {
+      const m = Math.min(combo.n, COMBO_MAX), k = clamp((t - combo.t0) / .25, 0, 1), pop = 1 + (1 - k) * .35;
+      const col = m >= 4 ? ['#ffd0c9', '#ff5a4f', '#6d0d10'] : m >= 3 ? ['#fff07a', '#ffb000', '#7a3d00'] : ['#d9f4ff', '#4fb8ff', '#0b3d6b'];
+      ctx.save(); ctx.translate(cx, 128); ctx.scale(pop, pop);
+      text3d('COMBO x' + m, 0, 0, 34, col[0], col[1], col[2], 4);
+      ctx.restore();
+      ctx.font = `17px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.fillStyle = '#ffffff';
+      const sub = combo.names.join(' + ') + '   ' + combo.pts + ' pts';
+      ctx.strokeText(sub, cx, 152); ctx.fillText(sub, cx, 152);
+      const left = 1 - combo.ground / COMBO_GRACE;                            // barrinha: tempo no chão antes de fechar
+      if (player.ground && !player.grind) { ctx.fillStyle = 'rgba(0,0,0,.35)'; rr(cx - 60, 160, 120, 6, 3); ctx.fill(); ctx.fillStyle = col[1]; rr(cx - 60, 160, 120 * clamp(left, 0, 1), 6, 3); ctx.fill(); }
+    }
+    if (comboMsg) {
+      const a = clamp(comboMsg.life * 2, 0, 1), k = clamp((1.6 - comboMsg.life) / .2, 0, 1), sc = .6 + easeOut(k) * .4;
+      ctx.save(); ctx.globalAlpha = a; ctx.translate(cx, 138 - (1 - a) * 14); ctx.scale(sc, sc);
+      text3d(comboMsg.text, 0, 0, comboMsg.sub ? 42 : 30, '#ffffff', comboMsg.color, 'rgba(40,10,10,.9)', 5);
+      if (comboMsg.sub) text3d(comboMsg.sub, 0, 36, 28, '#fff7c2', '#ffd23a', '#7a3d00', 3);
+      ctx.restore();
+    }
   }
   // ================================================================
   //  MENUS (início, pausa, fim de jogo) desenhados no canvas
