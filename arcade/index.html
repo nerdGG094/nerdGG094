@@ -2463,7 +2463,9 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     ctx.fillStyle = g; rr(x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
     ctx.strokeStyle = yellow ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
     if (yellow) { ctx.fillStyle = 'rgba(255,255,255,.35)'; rr(x - w / 2 + 10, y - h / 2 + 4, w - 20, h * .32, h * .16); ctx.fill(); }
-    ctx.font = `${Math.round(h * .46)}px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    let fs = Math.round(h * .46); ctx.font = `${fs}px ${UI}`;
+    const tw = ctx.measureText(label).width; if (tw > w - 28) { fs = Math.floor(fs * (w - 28) / tw); ctx.font = `${fs}px ${UI}`; }   // texto sempre cabe no botão
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = yellow ? '#5a2e00' : '#ffffff'; ctx.fillText(label, x, y + 2);
     menuButtons.push({ id, x: x - w / 2, y: y - h / 2 + menuOY, w, h });
   }
@@ -2579,12 +2581,12 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
         gameButton('again', ox - 70, 284, 230, 54, '↻  JOGAR DE NOVO', 'yellow', true);
         gameButton('menu', ox + 118, 284, 110, 46, 'MENU', 'ghost');
         if (RANK_ON && score > 0) {
-          if (!rankSent) gameButton('send', ox + 285, 284, 196, 46, '🏆  ENVIAR RANKING', 'ghost');
+          if (!rankSent) gameButton('send', ox + 300, 284, 220, 46, '🏆 ENVIAR RANKING', 'ghost');
           else {
             ctx.font = `16px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillStyle = rankSent.ok ? '#9bcb45' : rankSent.wait ? '#eaf5e9' : '#ff8a7a';
-            ctx.fillText(rankSent.msg, ox + 285, 286);
-            if (rankSent.ok) gameButton('rank', ox + 285, 322, 150, 34, 'VER RANKING', 'ghost');
+            ctx.fillText(rankSent.msg, ox + 300, 286);
+            if (rankSent.ok) gameButton('rank', ox + 300, 322, 150, 34, 'VER RANKING', 'ghost');
           }
         }
       } else { ctx.font = `16px ${UI}`; ctx.fillStyle = '#9bcb45'; ctx.fillText('Bebeu, reciclou!', ox, 290); }
