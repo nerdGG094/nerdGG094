@@ -1322,7 +1322,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   const SCOOT_IMG = new Image(); SCOOT_IMG.src = 'assets/mascote-patinete.webp';
   const SC = { size: 400, cx: 200, bot: 353, bar: [75, 93],
     poses: [{ deck: [209, 322, 0], bar: [284, 229] }, { deck: [231, 322, 0], bar: [295, 208] }, { deck: null, bar: [306, 254] },
-      { deck: null, bar: [264, 229] }, { deck: [187, 322, 0], bar: [282, 150] }] };
+      { deck: null, bar: [264, 229] }, { deck: [187, 322, 0], bar: null }] };   // no-hander: mãos soltas, guidão na altura normal
   const scooterOn = () => loja.loc === 'patinete' && ok(SCOOT_IMG);
   const wheels = () => skateOn() || scooterOn();                             // sobre rodas: obstáculos, grind, rampas…
   // estampa do skate: a imagem de lado é recolorida (faixa vermelha → cor base, faixa amarela → cor da faixa)
