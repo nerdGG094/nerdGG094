@@ -668,9 +668,12 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       const q = Math.random();
       if (q < .4) {
         // corrimão (só de skate): pula em cima para fazer grind, ou por cima
-        w = 300 + Math.round(Math.random() * 180);
+        // às vezes um corrimão bem longo, para deslizar bastante
+        const longo = score > 120 && Math.random() < .4;
+        w = longo ? 950 + Math.round(Math.random() * 650) : 300 + Math.round(Math.random() * 180);
         obstacles.push({ kind: 'rail', x: x0, w, h: 50 });
-        for (let i = 0; i < 5; i++) coins.push({ x: x0 + 70 + i * (w - 130) / 4, y: GROUND - 50 - 62, ph: i * .5 });
+        const nc = longo ? Math.round(w / 90) : 5;
+        for (let i = 0; i < nc; i++) coins.push({ x: x0 + 70 + i * (w - 130) / (nc - 1), y: GROUND - 50 - 62 - (longo ? Math.sin(i / (nc - 1) * Math.PI * 3) * 14 : 0), ph: i * .5 });
       } else if (q < .7) {
         // rampa: sobe nela andando e sai voando bem alto
         w = 170;
@@ -842,13 +845,17 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   // grind no corrimão (só de skate): cai em cima dele vindo de um pulo
   const GRINDS = [
-    { label: '50-50!', f: 3, dy: 13, color: '#ffd84a' },
-    { label: 'NOSEGRIND!', f: 0, dy: 13, tilt: .14, color: '#7fd0ff' },
-    { label: '5-0 GRIND!', f: 0, dy: 13, tilt: -.14, color: '#9bcb45' },
-    { label: 'BOARDSLIDE!', f: 1, dy: 21, yaw: 1.0, color: '#ff6a5f' },
-    { label: 'CROOKED!', f: 3, dy: 13, tilt: .1, color: '#f08a1c' }
+    // poses próprias (Gemini 9H–9L, células 7–11); tilt = ângulo do skate medido na imagem (gira no truck que raspa)
+    { label: '50-50!', f: 7, dy: 13, color: '#ffd84a' },
+    { label: 'NOSEGRIND!', f: 8, dy: 13, tilt: .336, color: '#7fd0ff' },
+    { label: '5-0 GRIND!', f: 9, dy: 13, tilt: -.384, color: '#9bcb45' },
+    { label: 'BOARDSLIDE!', f: 11, dy: 21, yaw: .92, color: '#ff6a5f' },
+    { label: 'CROOKED!', f: 10, dy: 13, tilt: .336, color: '#f08a1c' }
   ];
   let lastGrind = null;
+  const GRIND_TRUCK = 88;                                                    // distância do truck ao meio do skate (px do atlas)
+  // x na tela do ponto que raspa no corrimão (truck da frente, de trás ou o meio)
+  const grindX = () => { const g = player.grind && player.grind.g; return PX + (g && g.tilt ? Math.sign(g.tilt) * GRIND_TRUCK * SP.scale * Math.cos(player.grind.slope) : 0); };
   // obstáculos de skate onde dá para andar em cima: rampa (curva que sobe) e escadaria (degraus + patamar)
   function surfaceAt(o, x) {
     const u = x - o.x;
@@ -990,7 +997,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
         const o = player.grind.o, rt = railTop(o, PX); player.grind.t += dt;
         player.vy = 0; player.coyote = 0;
         if (rt >= 0) player.y = rt - player.grind.g.dy;
-        if (Math.random() < .8) particles.push({ type: 'spark', x: PX + (Math.random() - .5) * 30, y: GROUND - player.y - player.grind.g.dy + 1, vx: -220 - Math.random() * 260, vy: -60 - Math.random() * 140, life: .3, max: .3, r: 1.5 + Math.random() * 2, color: Math.random() < .6 ? '#ffd23a' : '#ffffff' });
+        if (Math.random() < .8) particles.push({ type: 'spark', x: grindX() + (Math.random() - .5) * (player.grind.g.tilt ? 12 : 30), y: GROUND - Math.max(rt, railTop(o, grindX())) + 1, vx: -220 - Math.random() * 260, vy: -60 - Math.random() * 140, life: .3, max: .3, r: 1.5 + Math.random() * 2, color: Math.random() < .6 ? '#ffd23a' : '#ffffff' });
         if (o.dead || rt < 0) endGrind(true);
       } else if (!player.ground) {
         const prevY = player.y;
@@ -1218,7 +1225,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   // o skate em si é UM desenho só (skate-shape), colado embaixo dos pés pelo código: deck = [centro x, topo da lixa y, ângulo] de cada pose
   const SKATE_SHAPE = new Image(); SKATE_SHAPE.src = 'assets/skate-shape.webp';
   const SK = { size: 400, cx: 200, fy: 216, bot: 372, shape: { w: 262, h: 64, top: 14 },
-    deck: [[195, 322, 0], [200, 322, 0], [205, 322, 0], [190, 322, 0], [222, 308, -.31], [195, 303, 0], [232, 342, 0]] };
+    deck: [[195, 322, 0], [200, 322, 0], [205, 322, 0], [190, 322, 0], [222, 308, -.31], [195, 303, 0], [232, 342, 0],
+      [208, 322, 0], [225, 322, 0], [196, 322, 0], [225, 322, 0], [216, 322, 0]] };   // 7–11: grinds (50-50, nosegrind, 5-0, crooked, boardslide)
   const skateOn = () => loja.acc === 'skate' && ok(SKATE_IMG) && ok(SKATE_SHAPE);
   const SP = { size: 256, feet: 246, cx: 128, bodyMid: 101, scale: .62,
     run: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], rise: 11, air: 12, fall: 13, land: 14, slide: 18, dizzy: 19, idle: [20, 21, 22, 22, 22, 21, 23, 20] };
@@ -1476,7 +1484,10 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     const draw = (x, y, r, a) => {
       ctx.save(); ctx.globalAlpha *= a;
       ctx.translate(x, y);
-      if (player.grind && state === 'running') ctx.rotate((player.grind.g.tilt || 0) + player.grind.slope);
+      if (player.grind && state === 'running') {                            // nosegrind/crooked: gira no truck da frente; 5-0: no de trás
+        const g = player.grind.g; ctx.rotate(player.grind.slope);
+        if (g.tilt) { const tx = (SK.deck[f][0] - SK.cx + Math.sign(g.tilt) * GRIND_TRUCK) * k, ty = -22 * k; ctx.translate(tx, ty); ctx.rotate(g.tilt); ctx.translate(-tx, -ty); }
+      }
       else if (player.ground && player.slope && state === 'running') ctx.rotate(-player.slope);   // nosegrind / 5-0: inclina em cima do corrimão
       if (r) { const fy = (SK.bot - SK.fy) * k; ctx.translate(0, -fy); ctx.rotate(r); ctx.translate(0, fy); }   // gira em volta da fruta
       drawBoard(f, k);                                                       // o skate não balança
@@ -2452,7 +2463,9 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   // corrimão de metal com postes vermelhos (desenhado no código)
   function drawRail(o) {
     const top = GROUND - o.h, x0 = o.x, x1 = o.x + o.w, posts = [x0 + 16, x1 - 16];
-    if (o.w > 330) posts.push((x0 + x1) / 2);
+    const np = Math.max(1, Math.round((o.w - 32) / 260));                     // postes a cada ~260 px
+    for (let i = 1; i < np; i++) posts.push(x0 + 16 + (o.w - 32) * i / np);
+    if (o.w > 330 && np < 2) posts.push((x0 + x1) / 2);
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, GROUND + 2, o.w * .52, 5, 0, 0, TAU); ctx.fill();
     posts.forEach(px => {
       const pg = ctx.createLinearGradient(px - 4, 0, px + 4, 0);
@@ -2469,9 +2482,9 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0 + 8, top - 1.5); ctx.lineTo(x1 - 8, top - 1.5); ctx.stroke();
     ctx.lineCap = 'butt';
     if (player.grind && player.grind.o === o) {                              // brilho onde o skate raspa
-      const gl = ctx.createRadialGradient(PX, top, 1, PX, top, 26);
+      const gx = grindX(), gl = ctx.createRadialGradient(gx, top, 1, gx, top, 26);
       gl.addColorStop(0, 'rgba(255,230,140,.9)'); gl.addColorStop(1, 'rgba(255,200,60,0)');
-      ctx.fillStyle = gl; ctx.fillRect(PX - 26, top - 26, 52, 52);
+      ctx.fillStyle = gl; ctx.fillRect(gx - 26, top - 26, 52, 52);
     }
   }
   // rampa de madeira (kicker) com lateral vermelha da Jaboti e borda de metal no topo
@@ -2534,9 +2547,9 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(r0[0] + 3, r0[1] - 2.5); ctx.lineTo(r1[0] - 3, r1[1] - 2.5); ctx.stroke();
     ctx.lineCap = 'butt';
     if (player.grind && player.grind.o === o) {
-      const gy = GROUND - railTop(o, PX), gl = ctx.createRadialGradient(PX, gy, 1, PX, gy, 26);
+      const gx = grindX(), gy = GROUND - Math.max(railTop(o, PX), railTop(o, gx)), gl = ctx.createRadialGradient(gx, gy, 1, gx, gy, 26);
       gl.addColorStop(0, 'rgba(255,230,140,.9)'); gl.addColorStop(1, 'rgba(255,200,60,0)');
-      ctx.fillStyle = gl; ctx.fillRect(PX - 26, gy - 26, 52, 52);
+      ctx.fillStyle = gl; ctx.fillRect(gx - 26, gy - 26, 52, 52);
     }
   }
   function drawProp(o) {
