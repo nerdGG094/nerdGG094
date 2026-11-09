@@ -226,9 +226,15 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     flash = 0; shake = 0; hitstop = 0; newBest = false; runPhase = 0; stepIndex = 0; celebrate = 0;
     skills = {}; items = []; skillTimer = 3.5; lataTimer = 22 + Math.random() * 10; invuln = 0; pts = 0; vel = START_SPEED;
   }
+  // profundidade: d = 0 bem longe (pequeno, lento, transparente) até 1 perto (grande, rápido)
+  function newCloud(x) {
+    const d = Math.random() < .12 ? .95 + Math.random() * .05 : Math.random() * .75;
+    return { x, y: 18 + (1 - d) * 70 + Math.random() * 40, d, s: .4 + d * 1.15, k: Math.floor(Math.random() * 9) };
+  }
+  function newBird(x) { const d = Math.random(); return { x, y: 40 + (1 - d) * 50 + Math.random() * 60, d, ph: Math.random() * TAU }; }
   function initScenery() {
-    clouds = Array.from({ length: 7 }, (_, i) => ({ x: i * 160 + Math.random() * 100, y: 26 + Math.random() * 90, s: .55 + Math.random() * .7, k: Math.floor(Math.random() * 9) }));
-    birds = Array.from({ length: 3 }, () => ({ x: Math.random() * W, y: 50 + Math.random() * 80, ph: Math.random() * TAU }));
+    clouds = Array.from({ length: 9 }, (_, i) => newCloud(i * 120 + Math.random() * 80));
+    birds = Array.from({ length: 6 }, () => newBird(Math.random() * W));
     // céu estrelado: muitas estrelinhas pequenas e algumas grandes que cintilam em cruz
     stars = Array.from({ length: 150 }, () => ({ x: Math.random() * W, y: Math.random() * (GROUND - 90), r: Math.random() < .12 ? 2.2 + Math.random() * 1.6 : .5 + Math.random() * 1.3, ph: Math.random() * TAU, sp: 1.2 + Math.random() * 2.5 }));
     flies = Array.from({ length: 16 }, () => ({ x: Math.random() * W, y: GROUND - 20 - Math.random() * 70, ph: Math.random() * TAU }));
@@ -530,8 +536,9 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
 
     // cenário sempre vivo
     const scroll = state === 'running' ? speed : 0;
-    clouds.forEach(c => { c.x -= (scroll * .05 + 8) * c.s * dt; if (c.x < -160) { c.x = W + 40 + Math.random() * 200; c.y = 26 + Math.random() * 90; c.k = Math.floor(Math.random() * 9); } });
-    birds.forEach(b => { b.x -= (scroll * .22 + 34) * dt; b.ph += dt * 9; if (b.x < -40) { b.x = W + 40 + Math.random() * 700; b.y = 46 + Math.random() * 90; } });
+    clouds.forEach((c, i) => { c.x -= (scroll * (.015 + c.d * .09) + 5 + c.d * 10) * dt; if (c.x < -260) clouds[i] = newCloud(W + 40 + Math.random() * 220); });
+    clouds.sort((a, b) => a.d - b.d);                                   // as de perto por cima
+    birds.forEach((b, i) => { b.x -= (scroll * (.08 + b.d * .3) + 22 + b.d * 30) * dt; b.ph += dt * (6 + b.d * 5); if (b.x < -40) birds[i] = newBird(W + 40 + Math.random() * 700); });
     flies.forEach(f => { f.x -= scroll * .5 * dt; f.ph += dt; if (f.x < -10) f.x += W + 20; });
 
     if (state === 'running') {
@@ -1120,7 +1127,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
       const s = c.s, x = c.x, y = c.y;
       if (CI) {
         const [cx0, cy0, cw, ch] = CLOUD_CELLS[c.k || 0], w = cw * .5 * s, h = ch * .5 * s;
-        ctx.globalAlpha = 1 - dark * .45;
+        ctx.globalAlpha = (.5 + (c.d || .5) * .5) * (1 - dark * .45);   // as de longe mais transparentes
         ctx.drawImage(CI, cx0, cy0, cw, ch, x, y - h * .6, w, h);
         ctx.globalAlpha = 1;
         return;
@@ -1319,6 +1326,30 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     return c;
   }
   // repete uma faixa horizontal; cópias alternadas são espelhadas para esconder a emenda
+  // cópia desfocada de uma imagem (feita uma vez): dá a sensação de foco no mascote
+  const blurCache = new Map();
+  function blurred(im, px) {
+    if (!ok(im)) return im;
+    const id = im.src + '#blur' + px;
+    let c = blurCache.get(id);
+    if (!c) {
+      c = document.createElement('canvas'); const pad = px * 3;
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const g = c.getContext('2d'); g.filter = `blur(${px}px)`; g.drawImage(im, 0, 0);
+      if (g.filter === 'none' || !('filter' in g)) return im;           // navegador sem filtro: usa a original
+      Object.assign(c, { src: id, naturalWidth: c.width, naturalHeight: c.height, complete: true });
+      blurCache.set(id, c);
+    }
+    return c;
+  }
+  // névoa de distância: véu da cor do horizonte por cima das camadas longe (mais forte quanto mais longe)
+  function haze(top, bottom, a) {
+    const hz = skyColors()[1], k = a * (1 - dark * .55);
+    const g = ctx.createLinearGradient(0, top, 0, bottom);
+    const c = v => hz.replace('rgb', 'rgba').replace(')', `,${v})`);
+    g.addColorStop(0, c(0)); g.addColorStop(.35, c(k)); g.addColorStop(1, c(k * .3));   // surge aos poucos: sem borda no céu
+    ctx.fillStyle = g; ctx.fillRect(0, top, W, bottom - top);
+  }
   function strip(im, factor, y, h, mirror = true, offset = 0) {
     const w = im.naturalWidth * h / im.naturalHeight, o = dist * factor + offset, src = N(im);
     for (let k = Math.floor(o / w); k * w - o < W; k++) {
@@ -1331,7 +1362,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     const s = .4, w = im.naturalWidth * s, h = im.naturalHeight * s;
     ctx.drawImage(N(im), x, base - h, w, h);
     // à noite entra a versão com janelas e luminárias acesas (alinhada pelo painel do logo)
-    if (dark > .02 && ok(FABRICA_NIGHT)) { ctx.globalAlpha = dark; ctx.drawImage(FABRICA_NIGHT, x - 27 * s, base - h - 3 * s, 998 * s, 315 * s); ctx.globalAlpha = 1; }
+    if (dark > .02 && ok(FABRICA_NIGHT)) { ctx.globalAlpha = dark; ctx.drawImage(blurred(FABRICA_NIGHT, .8), x - 27 * s, base - h - 3 * s, 998 * s, 315 * s); ctx.globalAlpha = 1; }
     const logo = IMG['logo-jaboti'];
     if (ok(logo)) {
       const lw = 88 * s, lh = lw * logo.naturalHeight / logo.naturalWidth, lx = x + 638 * s, ly = base - h + 74 * s;
@@ -1448,17 +1479,20 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     nightFilter(.55);
     ctx.save(); ctx.globalAlpha = bw.campo;
     if (bw.campo > .01) {
-    // morros gramados do interior de SP
-    strip(SCENE.morros, .04, GROUND - 150, 115, false);
+    // morros gramados do interior de SP (desfocados e bem enevoados: são o mais distante)
+    strip(blurred(SCENE.morros, 1.6), .04, GROUND - 150, 115, false);
+    haze(GROUND - 150, GROUND - 35, .32);
     // fábrica Jaboti ao longe
     const fab = sc('fabrica'), fo = dist * .1, tile = 1250;
     if (fab) for (let k = Math.floor(fo / tile) - 1; k <= Math.floor((fo + W) / tile) + 1; k++) {
       if (k !== 0 && hash(k * 3.3) < .3) continue;
       const fx = k * tile + 520 + (k === 0 ? 0 : hash(k * 9.1) * 400) - fo;
-      if (fx > -420 && fx < W + 40) drawFactoryImg(fab, fx, GROUND - 64);
+      if (fx > -420 && fx < W + 40) drawFactoryImg(blurred(fab, .8), fx, GROUND - 64);
     }
+    haze(GROUND - 140, GROUND - 40, .14);
     // colinas com árvores
     strip(SCENE.colinas, .2, GROUND - 108, 70);
+    haze(GROUND - 108, GROUND - 38, .06);
     }
     ctx.restore();
     // canavial e cidade: faixa atrás do alambrado (o céu do jogo continua aparecendo)
@@ -1476,11 +1510,13 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     
     // pássaros
     if (dark < .6 && bw.fabrica < .5) {
-      ctx.strokeStyle = D('2b3a3f'); ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.strokeStyle = D('2b3a3f'); ctx.lineCap = 'round';
       birds.forEach(b => {
-        const f = Math.sin(b.ph) * 6;
-        ctx.beginPath(); ctx.moveTo(b.x - 9, b.y - f); ctx.quadraticCurveTo(b.x - 4, b.y - 3, b.x, b.y); ctx.quadraticCurveTo(b.x + 4, b.y - 3, b.x + 9, b.y - f); ctx.stroke();
+        const k = .5 + b.d * .9, f = Math.sin(b.ph) * 6 * k;                // de longe: pequeno, fino e mais claro
+        ctx.globalAlpha = .45 + b.d * .55; ctx.lineWidth = 1.2 + b.d * 1.6;
+        ctx.beginPath(); ctx.moveTo(b.x - 9 * k, b.y - f); ctx.quadraticCurveTo(b.x - 4 * k, b.y - 3 * k, b.x, b.y); ctx.quadraticCurveTo(b.x + 4 * k, b.y - 3 * k, b.x + 9 * k, b.y - f); ctx.stroke();
       });
+      ctx.globalAlpha = 1;
     }
 
     nightFilter();
@@ -1532,6 +1568,37 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     for (let x = -((dist) % 68); x < W; x += 68) { ctx.fillRect(x + 4, GROUND + 10, 26, 2); ctx.fillRect(x + 38, GROUND + 28, 22, 2); }
   }
 
+  // primeiro plano bem perto da câmera (Gemini): passa mais rápido que a pista, grande e desfocado.
+  // FG_CELLS: [x na tira, y, largura, altura, altura na tela, peso no sorteio]
+  const FG_IMG = new Image(); FG_IMG.src = 'assets/cenario/primeiro-plano.webp';
+  const FG_CELLS = [
+    [0, 0, 68, 180, 360, 1],      // poste
+    [72, 48, 156, 132, 120, 3],   // moita
+    [232, 27, 124, 153, 125, 4],  // capim
+    [360, 27, 124, 153, 115, 4],  // capim 2
+    [488, 0, 84, 180, 250, 1],    // placa com garrafa
+    [576, 31, 97, 149, 105, 2],   // hidrante
+    [677, 25, 94, 155, 115, 2],   // vaso com cacto
+    [775, 13, 98, 167, 150, 2]    // vaso com palmeira
+  ];
+  const FG_TOTAL = FG_CELLS.reduce((a, c) => a + c[5], 0);
+  function drawNearFg() {
+    if (!ok(FG_IMG) || state === 'ready') return;
+    nightFilter(.6);
+    const src = N(blurred(FG_IMG, 1.4)), fo = dist * 1.4, tile = 520;
+    for (let k = Math.floor(fo / tile) - 1; k <= Math.floor((fo + W) / tile) + 1; k++) {
+      if (hash(k * 5.7) < .35) continue;                                  // nem todo trecho tem objeto
+      let r = hash(k * 2.9) * FG_TOTAL, i = 0;
+      while (r > FG_CELLS[i][5]) { r -= FG_CELLS[i][5]; i++; }
+      const [sx, sy, sw, sh, th] = FG_CELLS[i], tw = sw * th / sh;
+      const x = k * tile + hash(k * 8.3) * 260 - fo, base = H + 18 + hash(k * 1.7) * 14;
+      if (x + tw < 0 || x > W) continue;
+      const near = x < PX + 70 && x + tw > PX - 70;                        // passando na frente do mascote
+      ctx.globalAlpha = near ? .45 : th > 200 ? .6 : .92;               // altos (poste, placa) mais transparentes: não escondem obstáculos
+      ctx.drawImage(src, sx, sy, sw, sh, x, base - th, tw, th);
+    }
+    ctx.globalAlpha = 1;
+  }
   function drawForeground() {
     const fo = dist * 1.3, tuft = sc('grama');
     if (tuft) {
@@ -1794,6 +1861,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
   // lata especial: raios dourados girando atrás e a lata girando no próprio eixo
   const LATA_IMG = new Image(); LATA_IMG.src = 'assets/lata.webp';
   const LATA_FRAMES = 1;
+  let lataCanvas = null;
   function drawLata(it) {
     const bob = Math.sin(it.ph * 2) * 6, y = it.y + bob;
     ctx.save(); ctx.translate(it.x, y);
@@ -1809,12 +1877,32 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     gl.addColorStop(0, 'rgba(255,240,170,.8)'); gl.addColorStop(1, 'rgba(255,220,90,0)');
     ctx.fillStyle = gl; ctx.fillRect(-44, -44, 88, 88);
     if (ok(LATA_IMG)) {
-      // lata de frente (ilustração do Gemini) girando: a largura achata e estica
-      const fw = LATA_IMG.naturalWidth / LATA_FRAMES, fh = LATA_IMG.naturalHeight, f = Math.floor(it.ph * 3) % LATA_FRAMES;
-      const h = 58, w = fw * h / fh, c = Math.cos(it.ph * 1.5);
-      ctx.scale(Math.max(.18, Math.abs(c)), 1);
-      ctx.drawImage(LATA_IMG, f * fw, 0, fw, fh, -w / 2, -h / 2, w, h);
-      if (c < 0) { ctx.fillStyle = 'rgba(10,50,25,.35)'; ctx.fillRect(-w / 2, -h / 2 + 3, w, h - 6); }   // lado de trás mais escuro
+      // lata girando como cilindro 3D: a largura não muda, o rótulo corre em volta.
+      // A imagem (vista de frente) é fatiada em colunas e "enrolada": coluna da tela em x → ângulo asin(x) + giro
+      const fw = LATA_IMG.naturalWidth / LATA_FRAMES, fh = LATA_IMG.naturalHeight;
+      const h = 58, w = fw * h / fh, spin = it.ph * 1.5, N = 26, K = 2;          // K: resolução da tela auxiliar
+      const LID = 16 / 128 * fh, BASE = 8 / 128 * fh;                           // tampa e fundo prateados na imagem
+      const cv = lataCanvas || (lataCanvas = document.createElement('canvas'));
+      if (cv.width !== Math.ceil(w * K)) { cv.width = Math.ceil(w * K); cv.height = Math.ceil(h * K); }
+      const g = cv.getContext('2d'), CW = cv.width, CH = cv.height;
+      g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, CW, CH);
+      const tex = a => { a = ((a + Math.PI) % TAU + TAU) % TAU - Math.PI; return (Math.sin(a) + 1) / 2 * (fw - 1); };
+      for (let i = 0; i < N; i++) {
+        const x0 = -w / 2 + i * w / N, x1 = x0 + w / N;
+        const t0 = tex(Math.asin(clamp(2 * x0 / w, -1, 1)) + spin), t1 = tex(Math.asin(clamp(2 * x1 / w, -1, 1)) + spin);
+        const sx = Math.min(t0, t1), sw = Math.max(1, Math.abs(t1 - t0));
+        g.drawImage(LATA_IMG, Math.min(sx, fw - sw), LID, sw, fh - LID - BASE, (x0 + w / 2) * K, LID / fh * CH, (w / N + .6) * K, (fh - LID - BASE) / fh * CH);
+      }
+      // tampa e fundo não giram (num cilindro são iguais de qualquer ângulo)
+      g.drawImage(LATA_IMG, 0, 0, fw, LID, 0, 0, CW, LID / fh * CH);
+      g.drawImage(LATA_IMG, 0, fh - BASE, fw, BASE, 0, (fh - BASE) / fh * CH, CW, BASE / fh * CH);
+      // sombra nas bordas e brilho de metal fixos (a luz não gira com a lata), só sobre a lata
+      g.globalCompositeOperation = 'source-atop';
+      const sh = g.createLinearGradient(0, 0, CW, 0);
+      sh.addColorStop(0, 'rgba(0,20,10,.45)'); sh.addColorStop(.22, 'rgba(255,255,255,.28)'); sh.addColorStop(.32, 'rgba(255,255,255,0)');
+      sh.addColorStop(.7, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,20,10,.5)');
+      g.fillStyle = sh; g.fillRect(0, 0, CW, CH);
+      ctx.drawImage(cv, -w / 2, -h / 2, w, h);
     } else {
       // lata desenhada enquanto a ilustração não chega
       const sx = Math.max(.25, Math.abs(Math.cos(it.ph * 1.5)));
@@ -2171,6 +2259,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
     drawGas();
     drawPlayerFx();
     drawForeground();
+    drawNearFg();
     if (dark > 0) { ctx.fillStyle = `rgba(14,22,58,${dark * .22})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
     if (skills.lento > 0) { ctx.fillStyle = `rgba(120,60,200,${.12 * Math.min(1, skills.lento)})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
     drawGlows();
@@ -2210,7 +2299,7 @@ html.app .privlink{display:inline;bottom:6px;left:50%;transform:translateX(-50%)
   // decodifica todas as imagens já no início (as folhas dos poderes têm 2400×900);
   // sem isso o primeiro uso de cada uma trava o jogo por uma fração de segundo
   const warmCtx = document.createElement('canvas').getContext('2d');
-  [...Object.values(IMG), ...Object.values(SCENE), BOTTLES, SPRITES, LATA_IMG, SLIDE_IMG, MORTAL_IMG, POSES_IMG, GAS_IMG, SUN_IMG, MOON_IMG, CLOUDS_IMG, OUTDOOR_NIGHT, DRONE_IMG, FABRICA_NIGHT, ...Object.values(TRECHO)]
+  [...Object.values(IMG), ...Object.values(SCENE), BOTTLES, SPRITES, LATA_IMG, SLIDE_IMG, MORTAL_IMG, POSES_IMG, GAS_IMG, SUN_IMG, MOON_IMG, CLOUDS_IMG, OUTDOOR_NIGHT, DRONE_IMG, FABRICA_NIGHT, FG_IMG, ...Object.values(TRECHO)]
     .forEach(im => (im.decode ? im.decode() : Promise.resolve()).then(() => warmCtx.drawImage(im, 0, 0, 1, 1)).catch(() => {}));
   // prepara as versões coloridas do mascote aos poucos, uma por vez, para a primeira garrafa não travar o jogo
   const tintJobs = [];
