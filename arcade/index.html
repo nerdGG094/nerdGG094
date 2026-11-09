@@ -1711,17 +1711,21 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     ctx.lineCap = 'butt';
   }
   // pose f do atlas do patinete com o patinete embaixo (origem do contexto = chão, sob o meio da célula)
-  function drawScooterPose(f, k, tintKey, yaw = 0, squash = 1) {
+  // crouch (0–1): agacha dobrando só as pernas — fruta e braços descem inteiros junto com o guidão (não achata o mascote)
+  const SC_HIP = 270;                                                        // linha logo abaixo da fruta na pose andando (célula)
+  function drawScooterPose(f, k, tintKey, yaw = 0, crouch = 0) {
     const P0 = SC.poses[f] || SC.poses[0];
     let bar = P0.bar, deck = P0.deck || [P0.bar[0] - SC.bar[0], P0.bar[1] + SC.bar[1], 0];
-    if (squash !== 1 && bar) bar = [bar[0], deck[1] - (deck[1] - bar[1]) * squash];
+    const shoeTop = deck[1] - 18, legs = shoeTop - SC_HIP, drop = crouch * legs * .8;   // canelas ficam com 20% da altura
+    if (drop && bar) bar = [bar[0], bar[1] + drop];
     drawScooter(k, deck, bar, yaw);
     if (!ok(SCOOT_IMG)) return;
-    const S2 = SC.size * k, im = tinted(SCOOT_IMG, tintKey);
-    ctx.save();
-    if (squash !== 1) { const dk = (SC.bot - deck[1]) * k; ctx.translate(0, -dk); ctx.scale(1, squash); ctx.translate(0, dk); }
-    ctx.drawImage(im, f * SC.size, 0, SC.size, SC.size, -SC.cx * k, -SC.bot * k, S2, S2);
-    ctx.restore();
+    const S2 = SC.size * k, im = tinted(SCOOT_IMG, tintKey), sx = f * SC.size, X0 = -SC.cx * k, Y0 = -SC.bot * k;
+    if (!drop) { ctx.drawImage(im, sx, 0, SC.size, SC.size, X0, Y0, S2, S2); return; }
+    const cut = SC_HIP, bottom = SC.size;
+    ctx.drawImage(im, sx, 0, SC.size, cut, X0, Y0 + drop * k, S2, cut * k);                         // corpo descendo inteiro
+    ctx.drawImage(im, sx, cut, SC.size, legs, X0, Y0 + (cut + drop) * k, S2, (legs - drop) * k);       // canelas encolhidas
+    ctx.drawImage(im, sx, shoeTop, SC.size, bottom - shoeTop, X0, Y0 + shoeTop * k, S2, (bottom - shoeTop) * k);   // tênis no lugar
   }
   function scooterFrame() {
     if (state === 'ready' || state === 'shop') return Math.floor(t * .8) % 2;
@@ -1735,7 +1739,9 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     const tilt = player.ground || player.grind ? 0 : clamp(-player.vy / 2600, -.18, .22);
     const bob = player.ground && state === 'running' ? Math.abs(Math.sin(t * 22)) * 1.2 : 0;
     const yaw = T && T.whip ? (.5 - .5 * Math.cos(Math.PI * clamp(player.spin, 0, 1))) * T.whip * TAU : 0;
-    const squash = state === 'running' && player.ground && player.slide ? .74 : 1;
+    if (player.crouchK == null) player.crouchK = 0;
+    if (!ghostPass) player.crouchK = lerp(player.crouchK, state === 'running' && player.ground && player.slide ? 1 : 0, .35);   // agacha/levanta suave
+    const squash = player.crouchK;
     const draw = (x, y, r, a) => {
       ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y - bob);
       if (player.grind && state === 'running') {                               // grind: inclina na descida e na ponta da base que raspa
