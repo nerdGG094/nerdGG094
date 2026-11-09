@@ -536,7 +536,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   // ================================================================
   let state = 'ready', t = 0, last = 0;
   let player, pose, obstacles, coins, particles, texts, clouds, birds, stars, flies;
-  let speed, dist, score, bonus, caps, gap, flash, shake, hitstop, newBest, runPhase, stepIndex, celebrate, runTime = 0, rankSent = null, boardFly = null;   // boardFly: skate voando depois da batida
+  let speed, dist, score, bonus, caps, gap, flash, shake, hitstop, newBest, runPhase, stepIndex, celebrate, runTime = 0, rankSent = null, boardFly = null, trailHist = [];   // boardFly: skate voando depois da batida
   let hold = false, duckHeld = false;
   let skills, items, skillTimer, lataTimer, invuln, pts, vel;
 
@@ -569,7 +569,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     obstacles = []; coins = []; particles = []; texts = [];
     speed = START_SPEED; dist = 0; score = 0; bonus = 0; caps = 0; gap = 600; runTime = 0; rankSent = null; boardFly = null;
     flash = 0; shake = 0; hitstop = 0; newBest = false; runPhase = 0; stepIndex = 0; celebrate = 0;
-    combo = { n: 0, pts: 0, ground: 0, t0: -9, names: [] }; comboMsg = null;
+    combo = { n: 0, pts: 0, ground: 0, t0: -9, names: [] }; comboMsg = null; trailHist = [];
     skills = {}; items = []; skillTimer = 3.5; lataTimer = 22 + Math.random() * 10; invuln = 0; pts = 0; vel = START_SPEED;
   }
   // profundidade: d = 0 bem longe (pequeno, lento, transparente) até 1 perto (grande, rápido)
@@ -1070,6 +1070,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
         }
       }
 
+      if (loja.rastro) emitTrail(dt);
+      if (curSkin().fx === 'lava' && Math.random() < .35) particles.push({ type: 'flame', x: PX + (Math.random() - .5) * 40, y: GROUND - player.y - 40 - Math.random() * 40, vx: -(vel || speed) * .3, vy: -60 - Math.random() * 40, life: .35, max: .35, r: 3 + Math.random() * 3 });
       if (combo.n && player.ground && !player.grind) { combo.ground += dt; if (combo.ground > COMBO_GRACE) comboEnd(true); }
       if (comboMsg) { comboMsg.life -= realDt; if (comboMsg.life <= 0) comboMsg = null; }
       const wasSliding = player.slide;
@@ -1141,6 +1143,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       else if (p.type === 'spark') { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .92; p.vy *= .92; }
       else if (p.type === 'ring') { p.r += dt * 160; }
       else if (p.type === 'confetti') { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 420 * dt; p.rot += p.vr * dt; }
+      else if (p.type === 'bubble' || p.type === 'note') { p.x += p.vx * dt + Math.sin(t * 6 + p.ph) * 20 * dt; p.y += p.vy * dt; }
+      else if (p.type === 'flame') { p.x += p.vx * dt; p.y += p.vy * dt; p.r *= 1 - dt * 2.2; }
     });
     particles = particles.filter(p => p.life > 0);
     texts.forEach(x => { x.life -= dt; x.y -= 40 * dt; });
@@ -1242,7 +1246,26 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     { id: 'rosa', nome: 'ROSA', preco: 150, tint: { h: 330, sk: .7, vk: 1.15 } },
     { id: 'limao', nome: 'LIMÃO', preco: 200, tint: { h: 86, sk: .95, vk: 1.08 } },
     { id: 'prata', nome: 'PRATA', preco: 350, tint: { h: 0, sk: .06, vk: 1.25 } },
-    { id: 'dourado', nome: 'DOURADO', preco: 500, tint: { h: 46, sk: 1, vk: 1.18 } }
+    { id: 'dourado', nome: 'DOURADO', preco: 500, tint: { h: 46, sk: 1, vk: 1.18 } },
+    // especiais: cor + efeito animado em volta (fx); arco-íris troca de cor o tempo todo
+    { id: 'neon', nome: 'NEON', preco: 400, tint: { h: 318, sk: 1, vk: 1.3 }, fx: 'neon', aura: '255,70,200' },
+    { id: 'lava', nome: 'LAVA', preco: 450, tint: { h: 16, sk: 1, vk: 1.2 }, fx: 'lava', aura: '255,110,20' },
+    { id: 'galaxia', nome: 'GALÁXIA', preco: 550, tint: { h: 262, sk: .95, vk: .62 }, fx: 'galaxia', aura: '150,110,255' },
+    { id: 'arcoiris', nome: 'ARCO-ÍRIS', preco: 700, fx: 'arcoiris' }
+  ];
+  // locomoção (a pé ou de skate), estampas do skate e rastros atrás do mascote
+  const LOCS = [{ id: 'pe', nome: 'A PÉ', preco: 0 }, { id: 'skate', nome: 'SKATE', preco: 400 }];
+  const SHAPES = [
+    { id: 'sh_classico', nome: 'CLÁSSICO', preco: 0, base: '#cf2329', stripe: '#f5c31a' },
+    { id: 'sh_jaboti', nome: 'JABOTI', preco: 200, base: '#d7262b', stripe: '#ffd23a', pat: 'jaboti' },
+    { id: 'sh_chamas', nome: 'CHAMAS', preco: 250, base: '#1d1d22', stripe: '#ff7a1a', pat: 'chamas' },
+    { id: 'sh_xadrez', nome: 'XADREZ', preco: 250, base: '#141414', stripe: '#f2f2f2', pat: 'xadrez' },
+    { id: 'sh_neon', nome: 'NEON', preco: 300, base: '#ff3fa4', stripe: '#33e6ff', pat: 'neon' },
+    { id: 'sh_ouro', nome: 'OURO', preco: 600, base: '#d4a017', stripe: '#fff1a8', pat: 'ouro' }
+  ];
+  const TRAILS = [
+    { id: '', nome: 'NENHUM', preco: 0 }, { id: 'tr_bolhas', nome: 'BOLHAS', preco: 200 }, { id: 'tr_notas', nome: 'NOTAS', preco: 250 },
+    { id: 'tr_estrelas', nome: 'ESTRELAS', preco: 300 }, { id: 'tr_fogo', nome: 'FOGO', preco: 350 }, { id: 'tr_arco', nome: 'ARCO-ÍRIS', preco: 500 }
   ];
   // acessórios: o mascote inteiro redesenhado no Gemini usando o acessório (mesma grade da folha base),
   // mais a pose de deslize com ele. slide: [centro x da fruta, sola y] na imagem do deslize
@@ -1251,21 +1274,27 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     { id: 'bone', nome: 'BONÉ', preco: 150, slide: [105.6, 188], mortal: true },
     { id: 'chapeu', nome: 'CHAPÉU', preco: 250, slide: [91.1, 165], mortal: true },
     { id: 'oculos', nome: 'ÓCULOS', preco: 300, slide: [102.3, 177], mortal: true },
-    { id: 'coroa', nome: 'COROA', preco: 500, slide: [105.6, 193], mortal: true },
-    { id: 'skate', nome: 'SKATE', preco: 400, skate: true }               // anda de skate em vez de correr (não junta com acessório)
+    { id: 'coroa', nome: 'COROA', preco: 500, slide: [105.6, 193], mortal: true }
   ];
   const ACC_SHEET = {}, ACC_SLIDE = {}, ACC_MORTAL = {};
-  ACCS.forEach(a => { if (!a.id || a.skate) return;
+  ACCS.forEach(a => { if (!a.id) return;
     if (a.mortal) { const m = new Image(); m.src = 'assets/mascote-mortal-' + a.id + '.webp'; ACC_MORTAL[a.id] = m; }   // poses de giro com o acessório
     const i = new Image(); i.src = 'assets/mascote-' + a.id + '.webp'; ACC_SHEET[a.id] = i;
     const d = new Image(); d.src = 'assets/mascote-desliza-' + a.id + '.webp'; ACC_SLIDE[a.id] = d; });
-  let loja = { carteira: 0, tem: ['classico', ''], cor: 'classico', acc: '' };
+  let loja = { carteira: 0, tem: ['classico', ''], cor: 'classico', acc: '', loc: 'pe', shape: 'sh_classico', rastro: '' };
   try { loja = Object.assign(loja, JSON.parse(localStorage.getItem('jabotiRunLoja') || '{}')); } catch (e) {}
+  if (loja.acc === 'skate') { loja.acc = ''; loja.loc = 'skate'; }          // antes o skate era um "acessório"
   if (!ACCS.some(a => a.id === loja.acc)) loja.acc = '';                     // acessório antigo que saiu da loja
+  if (!LOCS.some(a => a.id === loja.loc)) loja.loc = 'pe';
+  if (!SHAPES.some(a => a.id === loja.shape)) loja.shape = 'sh_classico';
+  if (!TRAILS.some(a => a.id === loja.rastro)) loja.rastro = '';
+  if (!SKINS.some(a => a.id === loja.cor)) loja.cor = 'classico';
   const salvarLoja = () => { try { localStorage.setItem('jabotiRunLoja', JSON.stringify(loja)); } catch (e) {} };
-  const skinKey = () => loja.cor !== 'classico' ? 'skin_' + loja.cor : null;
-  const accSheet = () => loja.acc && ok(ACC_SHEET[loja.acc]) ? ACC_SHEET[loja.acc] : null;   // folha do mascote com o acessório
-  const accMortal = () => loja.acc && ok(ACC_MORTAL[loja.acc]) ? ACC_MORTAL[loja.acc] : null;
+  const curSkin = () => SKINS.find(k => k.id === loja.cor) || SKINS[0];
+  const skinKey = () => curSkin().tint ? 'skin_' + loja.cor : null;
+  // no skate o acessório não aparece (as poses de skate ainda não têm acessório)
+  const accSheet = () => loja.loc !== 'skate' && loja.acc && ok(ACC_SHEET[loja.acc]) ? ACC_SHEET[loja.acc] : null;   // folha do mascote com o acessório
+  const accMortal = () => loja.loc !== 'skate' && loja.acc && ok(ACC_MORTAL[loja.acc]) ? ACC_MORTAL[loja.acc] : null;
   // skate: atlas de 7 células de 400 px só com o mascote (0 e 1 andando, 2 remando, 3 agachado, 4 ollie, 5 grab, 6 kickflip);
   // fruta em x 200 / y 216 em todas; nas poses do chão as rodinhas do skate ficam em y 372
   const SKATE_IMG = new Image(); SKATE_IMG.src = 'assets/mascote-skate.webp';
@@ -1275,7 +1304,30 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   const SK = { size: 400, cx: 200, fy: 216, bot: 372, shape: { w: 262, h: 64, top: 14 },
     deck: [[195, 322, 0], [200, 322, 0], [205, 322, 0], [190, 322, 0], [222, 308, -.31], [195, 303, 0], [232, 342, 0],
       [208, 322, 0], [225, 322, 0], [196, 322, 0], [225, 322, 0]] };   // 7–10: grinds (50-50, nosegrind, 5-0, crooked)
-  const skateOn = () => loja.acc === 'skate' && ok(SKATE_IMG) && ok(SKATE_SHAPE);
+  const skateOn = () => loja.loc === 'skate' && ok(SKATE_IMG) && ok(SKATE_SHAPE);
+  // estampa do skate: a imagem de lado é recolorida (faixa vermelha → cor base, faixa amarela → cor da faixa)
+  const curShape = () => SHAPES.find(x => x.id === loja.shape) || SHAPES[0];
+  const shapeCache = {};
+  const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  function shapeImg(S = curShape()) {
+    if (S.id === 'sh_classico' || !ok(SKATE_SHAPE)) return SKATE_SHAPE;
+    if (shapeCache[S.id]) return shapeCache[S.id];
+    const c = document.createElement('canvas'); c.width = SKATE_SHAPE.naturalWidth; c.height = SKATE_SHAPE.naturalHeight;
+    const g = c.getContext('2d'); g.drawImage(SKATE_SHAPE, 0, 0);
+    try {
+      const d = g.getImageData(0, 0, c.width, c.height), px = d.data, B = hex(S.base), T = hex(S.stripe);
+      for (let y = 0; y < Math.min(c.height, 32); y++) for (let x = 0; x < c.width; x++) {
+        const i = (y * c.width + x) * 4, r = px[i], gg = px[i + 1], b = px[i + 2];
+        if (!px[i + 3]) continue;
+        let C = null, l = 1;
+        if (r > 120 && gg < 95 && b < 95 && r > 2 * gg) { C = B; l = r / 200; }                    // fundo vermelho
+        else if (r > 190 && gg > 100 && b < 120 && r - b > 90) { C = T; l = (r + gg) / 400; }       // faixa amarela/laranja
+        if (C) { px[i] = Math.min(255, C[0] * l); px[i + 1] = Math.min(255, C[1] * l); px[i + 2] = Math.min(255, C[2] * l); }
+      }
+      g.putImageData(d, 0, 0);
+    } catch (e) { return SKATE_SHAPE; }
+    return (shapeCache[S.id] = c);
+  }
   const SP = { size: 256, feet: 246, cx: 128, bodyMid: 101, scale: .62,
     run: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], rise: 11, air: 12, fall: 13, land: 14, slide: 18, dizzy: 19, idle: [20, 21, 22, 22, 22, 21, 23, 20] };
   const useVector = new URLSearchParams(location.search).has('vetor');
@@ -1459,7 +1511,36 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     for (let x = 112; x >= -112; x -= 16) stripe.push([x, 9]);
     return { per, kick, stripe, th: 10, pitch: .3, wy: -29, wr: 10, tx: 88, tz: 27 };
   })();
-  function drawBoard3D(k, roll, yaw) {
+  // desenho do fundo do skate (no plano do shape: x ao longo, z na largura) conforme a estampa
+  function paintBottom(S) {
+    const L = 131, Wd = 33;
+    ctx.fillStyle = S.base; ctx.fillRect(-L, -Wd, 2 * L, 2 * Wd);
+    if (!S.pat) { ctx.fillStyle = S.stripe; ctx.fillRect(-112, -9, 224, 18); return; }
+    if (S.pat === 'jaboti') {
+      ctx.fillStyle = S.stripe; ctx.fillRect(-L, -15, 2 * L, 30);
+      ctx.fillStyle = '#2aa555'; ctx.fillRect(-L, -19, 2 * L, 4); ctx.fillRect(-L, 15, 2 * L, 4);
+      ctx.save(); ctx.scale(1, 1); ctx.font = `24px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#d7262b'; ctx.fillText('JABOTI', 0, 1); ctx.restore();
+    } else if (S.pat === 'chamas') {
+      for (let i = 0; i < 6; i++) {
+        const z = -27 + i * 10.8, len = 120 + (i % 3) * 30;
+        const g = ctx.createLinearGradient(L, 0, L - len, 0); g.addColorStop(0, '#ffe24a'); g.addColorStop(.5, '#ff7a1a'); g.addColorStop(1, 'rgba(215,38,43,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(L, z - 6);
+        ctx.quadraticCurveTo(L - len * .5, z - 12, L - len, z + (i % 2 ? 4 : -4)); ctx.quadraticCurveTo(L - len * .45, z + 9, L, z + 6); ctx.fill();
+      }
+    } else if (S.pat === 'xadrez') {
+      ctx.fillStyle = S.stripe;
+      for (let x = -L; x < L; x += 11) for (let z = -Wd; z < Wd; z += 11) if (((x + L) / 11 + (z + Wd) / 11) % 2 < 1) ctx.fillRect(x, z, 11, 11);
+    } else if (S.pat === 'neon') {
+      const g = ctx.createLinearGradient(-L, 0, L, 0); g.addColorStop(0, '#ff3fa4'); g.addColorStop(1, '#7a3cff'); ctx.fillStyle = g; ctx.fillRect(-L, -Wd, 2 * L, 2 * Wd);
+      ctx.strokeStyle = S.stripe; ctx.lineWidth = 5;
+      for (let x = -L - 40; x < L; x += 26) { ctx.beginPath(); ctx.moveTo(x, -Wd); ctx.lineTo(x + 30, Wd); ctx.stroke(); }
+    } else if (S.pat === 'ouro') {
+      const g = ctx.createLinearGradient(-L, -Wd, L, Wd); g.addColorStop(0, '#8a6206'); g.addColorStop(.3, '#f5d061'); g.addColorStop(.5, '#fff7c9'); g.addColorStop(.7, '#e0b02a'); g.addColorStop(1, '#8a6206');
+      ctx.fillStyle = g; ctx.fillRect(-L, -Wd, 2 * L, 2 * Wd);
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(-60, -Wd, 10, 2 * Wd); ctx.fillRect(-40, -Wd, 4, 2 * Wd);
+    }
+  }
+  function drawBoard3D(k, roll, yaw, S = curShape()) {
     const cr = Math.cos(roll), sr = Math.sin(roll), cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(B3.pitch), sp = Math.sin(B3.pitch);
     const P = (x, y, z) => {                                                 // roll (eixo x) → yaw (eixo y) → câmera (pitch)
       const y1 = y * cr - z * sr, z1 = y * sr + z * cr;
@@ -1501,8 +1582,12 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     if (nTop > 0) {
       poly(top, '#2b2b2e', '#141416');                                       // lixa
     } else {
-      poly(bot, '#cf2329', '#4a1010');                                       // fundo vermelho
-      poly(B3.stripe.map(([x, z]) => P(x, B3.kick(x) - h - .2, z)), '#f5c31a');   // faixa amarela
+      // fundo com a estampa: o plano de baixo é afim na tela, então dá para desenhar nele com transform
+      const O = P(0, -h, 0), ex = P(1, -h, 0), ez = P(0, -h, 1);
+      ctx.save(); ctx.beginPath(); bot.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.clip();
+      ctx.transform(ex[0] - O[0], ex[1] - O[1], ez[0] - O[0], ez[1] - O[1], O[0], O[1]);
+      paintBottom(S); ctx.restore();
+      ctx.beginPath(); bot.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.strokeStyle = '#3a1a10'; ctx.lineWidth = 1.4 * k; ctx.stroke();
       under();
     }
   }
@@ -1518,7 +1603,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       drawBoard3D(k, -e * kick * TAU, e * shove * TAU);
       ctx.restore(); return;
     }
-    ctx.drawImage(SKATE_SHAPE, -B.w / 2 * k, -B.top * k, B.w * k, B.h * k);
+    ctx.drawImage(shapeImg(), -B.w / 2 * k, -B.top * k, B.w * k, B.h * k);
     ctx.restore();
   }
 
@@ -1553,7 +1638,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function drawBoardFly() {
     const b = boardFly, k = SP.scale, B = SK.shape; if (!ok(SKATE_SHAPE)) return;
-    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.drawImage(SKATE_SHAPE, -B.w / 2 * k, -B.h / 2 * k, B.w * k, B.h * k); ctx.restore();
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.drawImage(shapeImg(), -B.w / 2 * k, -B.h / 2 * k, B.w * k, B.h * k); ctx.restore();
   }
 
   function drawMascotVector() {
@@ -2732,6 +2817,20 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       else if (p.type === 'spark') { ctx.globalAlpha = a; star(p.x, p.y, p.r * 1.6, p.color); ctx.globalAlpha = 1; }
       else if (p.type === 'ring') { ctx.strokeStyle = `rgba(255,255,255,${a})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * .45, 0, 0, TAU); ctx.stroke(); }
       else if (p.type === 'confetti') { ctx.save(); ctx.globalAlpha = Math.min(1, a * 2); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color; ctx.fillRect(-p.r, -p.r * .4, p.r * 2, p.r * .8); ctx.restore(); }
+      else if (p.type === 'bubble') {
+        ctx.globalAlpha = Math.min(1, a * 1.6); ctx.strokeStyle = 'rgba(230,250,255,.9)'; ctx.lineWidth = 1.5; ctx.fillStyle = 'rgba(160,220,255,.18)';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(p.x - p.r * .35, p.y - p.r * .35, p.r * .25, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+      }
+      else if (p.type === 'note') {
+        ctx.globalAlpha = Math.min(1, a * 1.5); ctx.font = `${p.r}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.strokeText(p.ch, p.x, p.y); ctx.fillStyle = p.color; ctx.fillText(p.ch, p.x, p.y); ctx.globalAlpha = 1;
+      }
+      else if (p.type === 'flame') {
+        const r = Math.max(1, p.r), g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        g.addColorStop(0, `rgba(255,245,170,${a})`); g.addColorStop(.35, `rgba(255,170,40,${a * .95})`); g.addColorStop(.7, `rgba(240,70,20,${a * .7})`); g.addColorStop(1, 'rgba(200,30,20,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill();
+      }
     });
   }
   function drawSpeedLines() {
@@ -2750,6 +2849,30 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   // ================================================================
   //  INTERFACE
   // ================================================================
+  // rastros comprados na loja: partículas atrás do mascote (o arco-íris é uma faixa que segue a altura)
+  function emitTrail(dt) {
+    const id = loja.rastro, y0 = GROUND - player.y - (player.slide && player.ground ? 30 : 50), back = -(vel || speed) * .55;
+    if (id === 'tr_arco') { trailHist.forEach(h => h.x -= (vel || speed) * dt); trailHist.push({ x: PX - 18, y: y0 }); trailHist = trailHist.filter(h => h.x > -40).slice(-60); return; }
+    trailHist.length = 0;
+    const rate = { tr_bolhas: 22, tr_notas: 9, tr_estrelas: 20, tr_fogo: 45 }[id]; if (!rate) return;
+    const bx = PX - 38, drift = -(vel || speed) * .32;                       // saem atrás do mascote e ficam um pouco no ar
+    let n = rate * dt; while (n > 0) { if (Math.random() < n) {
+      const yy = y0 + (Math.random() - .5) * 56;
+      if (id === 'tr_bolhas') particles.push({ type: 'bubble', x: bx, y: yy, vx: drift + Math.random() * 40, vy: -25 - Math.random() * 40, life: 1.2, max: 1.2, r: 4 + Math.random() * 6, ph: Math.random() * TAU });
+      else if (id === 'tr_notas') particles.push({ type: 'note', x: bx - 4, y: yy - 6, vx: drift, vy: -22 - Math.random() * 26, life: 1.4, max: 1.4, r: 22 + Math.random() * 8, ph: Math.random() * TAU, ch: Math.random() < .5 ? '♪' : '♫', color: pick(['#ffd23a', '#7fd0ff', '#ff6a5f', '#b8f06a']) });
+      else if (id === 'tr_estrelas') particles.push({ type: 'spark', x: bx, y: yy, vx: drift + (Math.random() - .5) * 30, vy: (Math.random() - .5) * 40, life: .9, max: .9, r: 4 + Math.random() * 3.5, color: pick(['#ffd23a', '#ffffff', '#fff3a6']) });
+      else if (id === 'tr_fogo') particles.push({ type: 'flame', x: bx + 6, y: y0 + 8 + (Math.random() - .5) * 40, vx: drift - Math.random() * 50, vy: -35 - Math.random() * 50, life: .55, max: .55, r: 11 + Math.random() * 8 });
+    } n -= 1; }
+  }
+  function drawRainbowTrail() {
+    const cols = ['#ff4a4f', '#ff9a1a', '#ffd23a', '#57c84d', '#3aa0ff', '#8a5cff'];
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    cols.forEach((c, i) => {
+      ctx.strokeStyle = c; ctx.lineWidth = 5; ctx.globalAlpha = .85;
+      ctx.beginPath(); trailHist.forEach((h, j) => { const yy = h.y - 12 + i * 5; j ? ctx.lineTo(h.x, yy) : ctx.moveTo(h.x, yy); }); ctx.stroke();
+    });
+    ctx.restore();
+  }
   function drawPlayerFx() {
     const cy = GROUND - player.y - 58, live = state === 'running' || state === 'paused';
     // brilho pulsando atrás do mascote, na cor do poder
@@ -2773,8 +2896,22 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       for (let i = 3; i >= 1; i--) { ctx.save(); ctx.globalAlpha = .1 * (4 - i); ctx.translate(-i * 20, 0); drawMascot(); ctx.restore(); }
       ghostPass = false;
     }
+    // cor especial: brilho/efeito em volta e arco-íris trocando de cor
+    const SK2 = curSkin();
+    if (SK2.aura && state !== 'over') {
+      const a = .26 + Math.sin(t * (SK2.fx === 'lava' ? 9 : 4)) * .08, r = SK2.fx === 'neon' ? 64 + dark * 20 : 60, g = ctx.createRadialGradient(PX, cy, 6, PX, cy, r);
+      g.addColorStop(0, `rgba(${SK2.aura},${a + (SK2.fx === 'neon' ? dark * .25 : 0)})`); g.addColorStop(1, `rgba(${SK2.aura},0)`);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(PX, cy, r, 0, TAU); ctx.fill();
+    }
+    if (SK2.fx === 'galaxia' && state !== 'over') for (let i = 0; i < 5; i++) {
+      const an = t * 1.6 + i * TAU / 5; star(PX + Math.cos(an) * 46, cy + Math.sin(an) * 22 - 6, 2.5 + Math.sin(t * 6 + i) * 1.2, i % 2 ? '#d8c8ff' : '#ffffff');
+    }
+    if (loja.rastro === 'tr_arco' && live && trailHist.length > 2) drawRainbowTrail();
     // pisca durante a invencibilidade
+    const rainbow = SK2.fx === 'arcoiris' && 'filter' in ctx;
+    if (rainbow) ctx.filter = `hue-rotate(${(t * 140) % 360}deg) saturate(1.3)`;
     if (!(invuln > 0 && state === 'running' && Math.floor(t * 18) % 2)) drawMascot();
+    if (rainbow) ctx.filter = 'none';
     if (state !== 'running' && state !== 'paused') return;
     // ímã: ondas laranja puxando as tampinhas, com faíscas
     if (skills.ima > 0) {
@@ -3051,6 +3188,11 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     const pv = cx - 330, f = SP.idle[Math.floor(t * 3) % SP.idle.length], k = .95, sheet = tinted(accSheet() || SPRITES, skinKey());
     ctx.fillStyle = 'rgba(255,255,255,.06)'; rr(pv - 110, 80, 220, 250, 20); ctx.fill();
     ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(pv, 306, 46, 8, 0, 0, TAU); ctx.fill();
+    const SKp = curSkin();
+    if (SKp.aura) { const g = ctx.createRadialGradient(pv, 230, 8, pv, 230, 90); g.addColorStop(0, `rgba(${SKp.aura},.35)`); g.addColorStop(1, `rgba(${SKp.aura},0)`); ctx.fillStyle = g; ctx.fillRect(pv - 100, 140, 200, 180); }
+    if (loja.rastro) { ctx.save(); ctx.translate(pv - 62, 240); ctx.scale(1.4, 1.4); drawTrailIcon(loja.rastro, 0, 0, true); ctx.restore(); }
+    if (SKp.fx === 'galaxia') for (let i = 0; i < 5; i++) { const an = t * 1.6 + i * TAU / 5; star(pv + Math.cos(an) * 60, 220 + Math.sin(an) * 26, 3, '#ffffff'); }
+    if (SKp.fx === 'arcoiris' && 'filter' in ctx) ctx.filter = `hue-rotate(${(t * 140) % 360}deg) saturate(1.3)`;
     if (skateOn()) {
       const z = .62, fr = Math.floor(t * 1.2) % 2;
       ctx.save(); ctx.translate(pv, 310); drawBoard(fr, z); ctx.restore();
@@ -3059,12 +3201,23 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       const X0 = pv - SP.cx * k, Y0 = 306 - SP.feet * k;
       ctx.drawImage(sheet, (f % 8) * SP.size, Math.floor(f / 8) * SP.size, SP.size, SP.size, X0, Y0, SP.size * k, SP.size * k);
     }
+    ctx.filter = 'none';
+    // abas (categorias)
+    const gx = cx - 150, TABS = [['personagem', 'PERSONAGEM'], ['acessorios', 'ACESSÓRIOS'], ['locomocao', 'LOCOMOÇÃO'], ['shapes', 'SKATES'], ['rastros', 'RASTROS']];
+    TABS.forEach(([id, nome], i) => {
+      const x = gx + i * 100, on = shopTab === id;
+      ctx.fillStyle = on ? '#ffd23a' : 'rgba(255,255,255,.1)'; rr(x, 82, 92, 30, 15); ctx.fill();
+      if (!on) { ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+      ctx.font = `${nome.length > 9 ? 11 : 12}px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = on ? '#3a2400' : '#eaf5e9';
+      ctx.fillText(nome, x + 46, 98);
+      menuButtons.push({ id: 'tab:' + id, x, y: 82 + menuOY, w: 92, h: 30 });
+    });
     // cartões
     const card = (id, x, y, nome, preco, tem, usando, icon) => {
       ctx.fillStyle = usando ? 'rgba(255,214,58,.18)' : 'rgba(255,255,255,.08)'; rr(x, y, 92, 104, 14); ctx.fill();
       ctx.strokeStyle = usando ? '#ffd23a' : 'rgba(255,255,255,.22)'; ctx.lineWidth = usando ? 3 : 1.5; ctx.stroke();
-      icon(x + 46, y + 40);
-      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = `12px ${UI}`; ctx.fillStyle = '#eaf5e9'; ctx.fillText(nome, x + 46, y + 78);
+      ctx.save(); icon(x + 46, y + 40); ctx.restore();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = `${nome.length > 8 ? 11 : 12}px ${UI}`; ctx.fillStyle = '#eaf5e9'; ctx.fillText(nome, x + 46, y + 78);
       ctx.font = `13px ${UI}`;
       if (usando) { ctx.fillStyle = '#ffd23a'; ctx.fillText('✓ EM USO', x + 46, y + 96); }
       else if (tem) { ctx.fillStyle = '#9bcb45'; ctx.fillText('USAR', x + 46, y + 96); }
@@ -3075,41 +3228,76 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       }
       menuButtons.push({ id, x, y: y + menuOY, w: 92, h: 104 });
     };
-    const gx = cx - 150;
-    ctx.font = `14px ${UI}`; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = 'rgba(234,245,233,.75)';
-    ctx.fillText('COR DA FRUTA', gx, 92);
-    SKINS.forEach((sk, i) => card('skin:' + sk.id, gx + i * 100, 100, sk.nome, sk.preco, loja.tem.includes(sk.id), loja.cor === sk.id, (x, y) => {
-      if (!ok(SPRITES)) return;
-      const sh = tinted(SPRITES, sk.tint ? 'skin_' + sk.id : null), fr = 20, z = .36;   // cabeça do mascote na cor
-      ctx.drawImage(sh, (fr % 8) * 256 + 60, Math.floor(fr / 8) * 256 + 40, 136, 120, x - 136 * z / 2, y - 120 * z / 2 - 4, 136 * z, 120 * z);
-    }));
-    ctx.font = `14px ${UI}`; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(234,245,233,.75)';
-    ctx.fillText('ACESSÓRIOS', gx, 228);
-    ACCS.forEach((ac, i) => card('acc:' + ac.id, gx + i * 100, 236, ac.nome, ac.preco, loja.tem.includes(ac.id), loja.acc === ac.id, (x, y) => {
-      if (!ac.id) { ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 16, 0, TAU); ctx.moveTo(x - 11, y + 11); ctx.lineTo(x + 11, y - 11); ctx.stroke(); return; }
-      if (ac.skate) { if (ok(SKATE_ICON)) { const w = 74, h = w * SKATE_ICON.naturalHeight / SKATE_ICON.naturalWidth; ctx.drawImage(SKATE_ICON, x - w / 2, y - h / 2 - 2, w, h); } return; }
+    const grid = (list, kind, sel, icon) => list.forEach((it, i) => card(kind + ':' + it.id, gx + (i % 5) * 100, 124 + Math.floor(i / 5) * 114, it.nome, it.preco,
+      !it.preco || loja.tem.includes(it.id), sel === it.id, (x, y) => icon(it, x, y)));
+    const head = (sh, x, y, z = .36) => { if (ok(SPRITES)) ctx.drawImage(sh, (20 % 8) * 256 + 60, Math.floor(20 / 8) * 256 + 40, 136, 120, x - 136 * z / 2, y - 120 * z / 2 - 4, 136 * z, 120 * z); };
+    const none = (x, y) => { ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 16, 0, TAU); ctx.moveTo(x - 11, y + 11); ctx.lineTo(x + 11, y - 11); ctx.stroke(); };
+    if (shopTab === 'personagem') grid(SKINS, 'skin', loja.cor, (sk, x, y) => {
+      if (sk.aura) { const g = ctx.createRadialGradient(x, y - 4, 2, x, y - 4, 30); g.addColorStop(0, `rgba(${sk.aura},.55)`); g.addColorStop(1, `rgba(${sk.aura},0)`); ctx.fillStyle = g; ctx.fillRect(x - 30, y - 34, 60, 60); }
+      if (sk.fx === 'arcoiris' && 'filter' in ctx) ctx.filter = `hue-rotate(${(t * 140) % 360}deg) saturate(1.3)`;
+      head(tinted(SPRITES, sk.tint ? 'skin_' + sk.id : null), x, y);
+      ctx.filter = 'none';
+      if (sk.fx === 'galaxia') for (let i = 0; i < 3; i++) { const an = t * 2 + i * 2.1; star(x + Math.cos(an) * 24, y - 4 + Math.sin(an) * 10, 2.2, '#ffffff'); }
+    });
+    else if (shopTab === 'acessorios') grid(ACCS, 'acc', loja.acc, (ac, x, y) => {
+      if (!ac.id) { none(x, y); return; }
       const sh = ACC_SHEET[ac.id]; if (!ok(sh)) return;
-      const fr = 20, z = .36;                                              // cabeça do mascote usando o acessório
+      const fr = 20, z = .36;                                                // cabeça do mascote usando o acessório
       ctx.drawImage(tinted(sh, skinKey()), (fr % 8) * 256 + 50, Math.floor(fr / 8) * 256 + 20, 156, 140, x - 156 * z / 2, y - 140 * z / 2 - 4, 156 * z, 140 * z);
-    }));
+    });
+    else if (shopTab === 'locomocao') grid(LOCS, 'loc', loja.loc, (it, x, y) => {
+      if (it.id === 'skate') { if (ok(SKATE_ICON)) { const w = 74, h = w * SKATE_ICON.naturalHeight / SKATE_ICON.naturalWidth; ctx.drawImage(SKATE_ICON, x - w / 2, y - h / 2 - 2, w, h); } return; }
+      if (!ok(SPRITES)) return; const fr = Math.floor(t * 10) % 10, z = .3;   // correndo
+      ctx.drawImage(tinted(SPRITES, skinKey()), (fr % 8) * 256, Math.floor(fr / 8) * 256, 256, 256, x - 128 * z, y + 26 - 246 * z, 256 * z, 256 * z);
+    });
+    else if (shopTab === 'shapes') grid(SHAPES, 'shape', loja.shape, (S, x, y) => {
+      ctx.translate(x, y - 4); ctx.rotate(-.12); drawBoard3D(.3, -Math.PI * .78 + Math.sin(t * 1.5) * .12, .18, S);   // mostra o fundo (estampa)
+    });
+    else if (shopTab === 'rastros') grid(TRAILS, 'tr', loja.rastro, (it, x, y) => drawTrailIcon(it.id, x, y));
+    // avisos da categoria
+    ctx.font = `13px ${UI}`; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = 'rgba(234,245,233,.65)';
+    const note = shopTab === 'shapes' ? 'A estampa aparece no skate (compre o SKATE em LOCOMOÇÃO).'
+      : (shopTab === 'acessorios' || shopTab === 'locomocao') && loja.loc === 'skate' ? 'No skate o acessório fica guardado (ainda não aparece andando de skate).'
+      : shopTab === 'rastros' ? 'O rastro aparece atrás do mascote durante a corrida.' : '';
+    if (note) ctx.fillText(note, gx, 360);
     if (shopMsg && t - shopMsg.t0 < 1.6) {
       ctx.globalAlpha = Math.min(1, (1.6 - (t - shopMsg.t0)) * 2);
-      ctx.font = `18px ${UI}`; ctx.textAlign = 'center'; ctx.fillStyle = shopMsg.cor; ctx.fillText(shopMsg.txt, cx + 120, 355);
+      ctx.font = `18px ${UI}`; ctx.textAlign = 'center'; ctx.fillStyle = shopMsg.cor; ctx.fillText(shopMsg.txt, cx - 330, 352);
       ctx.globalAlpha = 1;
     }
   }
+  let shopTab = 'personagem';
+  const SHOP_LISTS = { skin: [SKINS, 'cor'], acc: [ACCS, 'acc'], loc: [LOCS, 'loc'], shape: [SHAPES, 'shape'], tr: [TRAILS, 'rastro'] };
   function shopTap(kind, id) {
-    const list = kind === 'skin' ? SKINS : ACCS, it = list.find(x => x.id === id);
-    if (!it) return;
-    if (!loja.tem.includes(id)) {
+    if (kind === 'tab') { shopTab = id; return; }
+    const L = SHOP_LISTS[kind]; if (!L) return;
+    const it = L[0].find(x => x.id === id); if (!it) return;
+    if (it.preco && !loja.tem.includes(id)) {
       if (loja.carteira < it.preco) { shopMsg = { txt: `Faltam ${it.preco - loja.carteira} tampinhas`, cor: '#ff8a7a', t0: t }; beep(180, .18, 'square', .04, .7); return; }
       loja.carteira -= it.preco; loja.tem.push(id); shopMsg = { txt: `${it.nome} comprado!`, cor: '#9bcb45', t0: t };
       sfx.buy();
     }
-    if (kind === 'skin') loja.cor = id; else loja.acc = id;
+    loja[L[1]] = id;
     salvarLoja();
-    if (kind === 'acc') { warmAcc(); if (!tintJobs.running) warmTintsStart(); }
+    if (kind === 'acc' || kind === 'loc') { warmAcc(); if (!tintJobs.running) warmTintsStart(); }
   }
+  // ícone pequeno de cada rastro (cartão da loja e prévia)
+  function drawTrailIcon(id, x, y, big) {
+    if (!id) { if (!big) { ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 16, 0, TAU); ctx.moveTo(x - 11, y + 11); ctx.lineTo(x + 11, y - 11); ctx.stroke(); } return; }
+    const ph = t * 2;
+    if (id === 'tr_bolhas') [[-20, 6, 7], [-4, -8, 5], [12, 4, 8], [24, -12, 4], [-14, -16, 3.5]].forEach(([dx, dy, r], i) => {
+      const yy = y + dy - ((ph * 8 + i * 7) % 10); ctx.strokeStyle = 'rgba(230,250,255,.95)'; ctx.lineWidth = 1.5; ctx.fillStyle = 'rgba(160,220,255,.25)';
+      ctx.beginPath(); ctx.arc(x + dx, yy, r, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + dx - r * .35, yy - r * .35, r * .25, 0, TAU); ctx.fill(); });
+    else if (id === 'tr_notas') [['♪', -14, 4, '#ffd23a'], ['♫', 8, -8, '#7fd0ff'], ['♪', 22, 8, '#ff6a5f']].forEach(([c, dx, dy, col], i) => {
+      ctx.font = '20px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = col; ctx.fillText(c, x + dx, y + dy + Math.sin(ph * 2 + i) * 3); });
+    else if (id === 'tr_estrelas') [[-18, 4, 5], [0, -10, 6.5], [18, 6, 4.5], [8, 14, 3]].forEach(([dx, dy, r], i) => star(x + dx, y + dy, r + Math.sin(ph * 3 + i) * 1, i % 2 ? '#ffffff' : '#ffd23a'));
+    else if (id === 'tr_fogo') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; [[-18, 6, 9], [-4, 0, 12], [12, 4, 9], [24, 8, 6]].forEach(([dx, dy, r], i) => {
+      const rr2 = r + Math.sin(ph * 4 + i) * 2, g = ctx.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, rr2);
+      g.addColorStop(0, 'rgba(255,240,150,.95)'); g.addColorStop(.5, 'rgba(255,140,30,.8)'); g.addColorStop(1, 'rgba(215,38,43,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x + dx, y + dy, rr2, 0, TAU); ctx.fill(); }); ctx.restore(); }
+    else if (id === 'tr_arco') { ['#ff4a4f', '#ff9a1a', '#ffd23a', '#57c84d', '#3aa0ff', '#8a5cff'].forEach((c, i) => {
+      ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.beginPath(); for (let k = 0; k <= 12; k++) { const xx = x - 30 + k * 5, yy = y - 12 + i * 4 + Math.sin(k * .6 - ph * 2) * 4; k ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); }); }
+  }
+
   // ================================================================
   //  RANKING ONLINE
   // ================================================================
@@ -3294,7 +3482,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     .forEach(im => (im.decode ? im.decode() : Promise.resolve()).then(() => warmCtx.drawImage(im, 0, 0, 1, 1)).catch(() => {}));
   // prepara as versões coloridas do mascote aos poucos, uma por vez, para a primeira garrafa não travar o jogo
   const tintJobs = [];
-  const warmAcc = () => { const sh = loja.acc === 'skate' ? SKATE_IMG : loja.acc && ACC_SHEET[loja.acc]; if (sh) Object.keys(POWER_TINT).forEach(k => tintJobs.unshift([sh, k])); };
+  const warmAcc = () => { const sh = loja.loc === 'skate' ? SKATE_IMG : loja.acc && ACC_SHEET[loja.acc]; if (sh) Object.keys(POWER_TINT).forEach(k => tintJobs.unshift([sh, k])); };
   if (skinKey()) [SPRITES, SLIDE_IMG, MORTAL_IMG, POSES_IMG].forEach(im => tintJobs.push([im, skinKey()]));   // cor comprada primeiro
   warmAcc();
   Object.keys(POWER_TINT).forEach(k => [SPRITES, SLIDE_IMG, MORTAL_IMG].forEach(im => tintJobs.push([im, k])));
