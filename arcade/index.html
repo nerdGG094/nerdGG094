@@ -79,6 +79,27 @@ kbd{font-family:var(--px);font-size:.55rem;color:#05030c;background:#e8e0ff;padd
 .foot{margin-top:34px;font-family:var(--px);font-size:.52rem;line-height:2;letter-spacing:.12em;color:var(--dim)}
 .foot a{color:var(--cyan);text-decoration:none}
 .foot a:hover{color:var(--yellow)}
+/* ranking na página */
+.scores{margin:34px auto 0;max-width:560px;padding:24px 22px 18px;background:#0b0420e6;border:4px solid var(--yellow);box-shadow:0 0 0 4px #05030c,8px 8px 0 4px #05030c,0 0 30px rgba(255,225,74,.25);position:relative}
+.scores h2{position:absolute;top:-16px;left:50%;transform:translateX(-50%);margin:0;padding:5px 12px;font-family:var(--px);font-weight:400;font-size:.7rem;letter-spacing:.14em;background:var(--yellow);color:#05030c;white-space:nowrap;box-shadow:3px 3px 0 #05030c}
+.scores ol{list-style:none;margin:0;padding:0;font-family:var(--px);font-size:.72rem;line-height:1}
+.scores li{display:flex;gap:14px;align-items:center;padding:9px 6px;border-bottom:2px dashed #3a2466}
+.scores li:nth-child(1){color:var(--yellow)}.scores li:nth-child(2){color:#e6e6ff}.scores li:nth-child(3){color:#ffad6b}
+.scores li.empty{justify-content:center;color:var(--dim)}
+.scores .pos{width:2.4em;color:var(--pink)}.scores .nm{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scores .pt{color:var(--cyan)}
+.scores .sub{margin:14px 0 0;font-size:1.05rem;color:var(--dim)}
+.scores .sub b{color:var(--yellow);font-weight:400}
+/* janela do apelido */
+.namebox{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(5,3,12,.75);padding:16px}
+.namebox[hidden]{display:none}
+.namebox form{width:min(100%,420px);padding:26px 22px 18px;background:#0b0420;border:4px solid #fff;box-shadow:0 0 0 4px #05030c,10px 10px 0 4px #05030c;text-align:center}
+.namebox h2{margin:0 0 16px;font-family:var(--px);font-weight:400;font-size:.8rem;letter-spacing:.14em;color:var(--yellow)}
+.namebox input{width:100%;padding:12px;font-family:var(--px);font-size:1rem;letter-spacing:.12em;text-transform:uppercase;text-align:center;color:#fff;background:#05030c;border:3px solid var(--cyan);outline:none}
+.namebox input:focus{box-shadow:0 0 12px var(--cyan)}
+.namebox .err{min-height:1.2em;margin:8px 0;color:var(--red);font-size:1.1rem}
+.namebox .row{display:flex;gap:14px;justify-content:center}
+.namebox .note{margin:14px 0 0;color:var(--dim);font-size:1rem}
+html.app .scores{display:none}
 @media (max-width:640px){
   body{font-size:18px;padding:10px 10px 40px}
   .hud{font-size:.48rem}.hud b{font-size:.62rem}
@@ -154,6 +175,11 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       <button id="sound" class="secondary mini" aria-label="Som">🔊 SOM</button>
       <a class="privlink" href="https://nerdgg094.github.io/nerdGG094/arcade/privacidade.html" target="_blank" rel="noopener">Política de privacidade</a>
     </div>
+    <section class="scores" id="scoresBox" hidden aria-label="Ranking online">
+      <h2>HIGH SCORES</h2>
+      <ol id="pageScores"></ol>
+      <p class="sub">Termine uma partida e toque em <b>ENVIAR RANKING</b> para entrar na lista.</p>
+    </section>
     <div class="help">
       <h2>COMO JOGAR</h2>
       <div>
@@ -180,6 +206,15 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       </div>
     </div>
   </section>
+  <div class="namebox" id="nameBox" hidden>
+    <form>
+      <h2>SEU APELIDO</h2>
+      <input type="text" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Apelido para o ranking">
+      <p class="err" role="alert"></p>
+      <div class="row"><button type="submit" class="pad">OK</button><button type="button" class="mini cancel">CANCELAR</button></div>
+      <p class="note">Aparece no ranking público. Use um apelido, não seu nome completo.</p>
+    </form>
+  </div>
   <p class="foot">REFRIGERANTES JABOTI · <a href="https://github.com/nerdGG094">JABDEV SOFTWARE ENGINEERING</a> · <a href="privacidade.html">PRIVACIDADE</a></p>
 </main>
 <script>
@@ -198,6 +233,11 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   const ctx = canvas.getContext('2d');
   // resolução de desenho: no app começa em até 1,5× e baixa sozinha se o celular não der conta
   const APP = document.documentElement.classList.contains('app');
+  // RANKING ONLINE (Supabase): preencha com a "Project URL" e a chave pública "anon" do projeto
+  // (Project Settings → API). A chave anon é pública por natureza: o banco só deixa ler o ranking e chamar enviar_pontos().
+  // No app Android fica desligado até a ficha da Play Store ser atualizada (permissão de internet + Segurança dos dados).
+  const RANKING = { url: 'https://cpfsehtbyjbzporelklm.supabase.co', key: 'sb_publishable_DoBM3qkF6kfw8aPMAtiirQ_SY2ejWS2' };
+  const RANK_ON = !!(RANKING.url && RANKING.key) && !APP;
   let renderScale = Math.min(window.devicePixelRatio || 1, APP ? 1.5 : 2);
   function fit() {
     canvas.width = Math.round(960 * renderScale); canvas.height = Math.round(360 * renderScale);
@@ -460,7 +500,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   // ================================================================
   let state = 'ready', t = 0, last = 0;
   let player, pose, obstacles, coins, particles, texts, clouds, birds, stars, flies;
-  let speed, dist, score, bonus, caps, gap, flash, shake, hitstop, newBest, runPhase, stepIndex, celebrate;
+  let speed, dist, score, bonus, caps, gap, flash, shake, hitstop, newBest, runPhase, stepIndex, celebrate, runTime = 0, rankSent = null;
   let hold = false, duckHeld = false;
   let skills, items, skillTimer, lataTimer, invuln, pts, vel;
 
@@ -475,7 +515,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     player = { y: 0, vy: 0, ground: true, jumps: 0, coyote: 0, buffer: 0, spin: -1, land: 0, stretch: 0, dx: 0, drop: 0, deadT: 0, landedDead: false, rotDead: 0, slide: false, blink: 2 };
     pose = { ...IDLE_POSE };
     obstacles = []; coins = []; particles = []; texts = [];
-    speed = START_SPEED; dist = 0; score = 0; bonus = 0; caps = 0; gap = 600;
+    speed = START_SPEED; dist = 0; score = 0; bonus = 0; caps = 0; gap = 600; runTime = 0; rankSent = null;
     flash = 0; shake = 0; hitstop = 0; newBest = false; runPhase = 0; stepIndex = 0; celebrate = 0;
     skills = {}; items = []; skillTimer = 3.5; lataTimer = 22 + Math.random() * 10; invuln = 0; pts = 0; vel = START_SPEED;
   }
@@ -522,12 +562,13 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   const JUMP_KEYS = [' ', 'ArrowUp', 'w', 'W'], DUCK_KEYS = ['ArrowDown', 's', 'S'];
   document.addEventListener('keydown', e => {
+    if (e.target && e.target.tagName === 'INPUT') return;          // digitando o apelido
     if (JUMP_KEYS.includes(e.key) || DUCK_KEYS.includes(e.key)) e.preventDefault();
     if (e.repeat) return;
     if (JUMP_KEYS.includes(e.key)) { hold = true; pressJump(); }
     if (DUCK_KEYS.includes(e.key)) duckHeld = true;
     if (e.key === 'p' || e.key === 'P') togglePause();
-    if (e.key === 'Escape' && state === 'shop') state = 'ready';
+    if (e.key === 'Escape' && (state === 'shop' || state === 'rank')) state = 'ready';
     if (e.key === 'm' || e.key === 'M') toggleSound();
   });
   document.addEventListener('keyup', e => {
@@ -813,7 +854,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       speed = Math.min(MAX_SPEED, speed + ACCEL * dt);
       vel = lerp(vel, speed + (skills.turbo > 0 ? 460 : 0), 1 - Math.exp(-dt * 5));
       dist += vel * dt;
-      pts += vel * dt * .025 * mult();
+      pts += vel * dt * .025 * mult(); runTime += realDt;
       const prev = score;
       score = Math.floor(pts) + bonus;
       if (Math.floor(score / 100) > Math.floor(prev / 100)) {
@@ -2375,7 +2416,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     const pad = n => String(n).padStart(5, '0');
     const show = flash === 0 || Math.floor(flash * 10) % 2 === 0;
     const ink = dark > .5 || biomeWeights().fabrica > .5 ? '#eaf5e9' : '#063d27';   // claro à noite e no teto escuro da fábrica
-    if (state === 'ready' || state === 'over' || state === 'shop') return;   // nos menus o painel já mostra pontos e recorde
+    if (state === 'ready' || state === 'over' || state === 'shop' || state === 'rank') return;   // nos menus o painel já mostra pontos e recorde
     ctx.textAlign = 'right';
     ctx.globalAlpha = .6; ctx.fillStyle = ink; ctx.fillText('HI ' + pad(best), W - 130, 16); ctx.globalAlpha = 1;
     if (show) { ctx.fillStyle = skills.dobro > 0 ? SKILLS.dobro.color : ink; ctx.fillText(pad(score), W - 20, 16); }
@@ -2456,7 +2497,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function menu() {
     menuButtons = [];
-    if (state !== 'ready' && state !== 'paused' && state !== 'over' && state !== 'shop') { menuState = ''; return; }
+    if (state !== 'ready' && state !== 'paused' && state !== 'over' && state !== 'shop' && state !== 'rank') { menuState = ''; return; }
     if (state !== menuState) { menuState = state; menuStart = t; }
     const mt = t - menuStart, cx = W / 2;
     ctx.save();
@@ -2479,6 +2520,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       gameButton('play', cx, 156, 210, 54, '▶  JOGAR', 'yellow', true);
       gameButton('shop', 96, 40, 150, 42, '🛒  LOJA', 'ghost');
       walletChip(186, 22);
+      if (RANK_ON) gameButton('rank', 96, 92, 150, 42, '🏆  RANKING', 'ghost');
       // garrafas = poderes
       ctx.font = `13px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = 'rgba(234,245,233,.75)';
       ctx.fillText('BEBA AS GARRAFAS E GANHE PODERES', cx, 210);
@@ -2498,6 +2540,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     }
 
     if (state === 'shop') drawShop(mt);
+    if (state === 'rank') drawRank(mt);
 
     if (state === 'paused') {
       ctx.fillStyle = 'rgba(2,10,7,.6)'; ctx.fillRect(0, -menuOY, W, H);
@@ -2535,6 +2578,15 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       if (player.deadT > 1.1) {
         gameButton('again', ox - 70, 284, 230, 54, '↻  JOGAR DE NOVO', 'yellow', true);
         gameButton('menu', ox + 118, 284, 110, 46, 'MENU', 'ghost');
+        if (RANK_ON && score > 0) {
+          if (!rankSent) gameButton('send', ox + 285, 284, 196, 46, '🏆  ENVIAR RANKING', 'ghost');
+          else {
+            ctx.font = `16px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = rankSent.ok ? '#9bcb45' : rankSent.wait ? '#eaf5e9' : '#ff8a7a';
+            ctx.fillText(rankSent.msg, ox + 285, 286);
+            if (rankSent.ok) gameButton('rank', ox + 285, 322, 150, 34, 'VER RANKING', 'ghost');
+          }
+        }
       } else { ctx.font = `16px ${UI}`; ctx.fillStyle = '#9bcb45'; ctx.fillText('Bebeu, reciclou!', ox, 290); }
     }
     ctx.restore();
@@ -2611,6 +2663,114 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     salvarLoja();
     if (kind === 'acc') { warmAcc(); if (!tintJobs.running) warmTintsStart(); }
   }
+  // ================================================================
+  //  RANKING ONLINE
+  // ================================================================
+  let rankTab = 'top', rankData = { top: null, semana: null }, rankBusy = false, rankErr = '', rankTry = 0;
+  let playerName = ''; try { playerName = localStorage.getItem('jabotiRunNome') || ''; } catch (e) {}
+  // chave nova (sb_publishable_…) vai só no cabeçalho apikey; a antiga (JWT anon) também no Authorization
+  const rankHeaders = () => Object.assign({ apikey: RANKING.key, 'Content-Type': 'application/json' }, RANKING.key.startsWith('sb_') ? {} : { Authorization: 'Bearer ' + RANKING.key });
+  async function rankLoad(force) {
+    if (!RANK_ON || rankBusy) return;
+    const tab = rankTab; if (rankData[tab] && !force && Date.now() - rankData[tab].t < 30000) return;
+    rankBusy = true; rankErr = ''; rankTry = Date.now();
+    try {
+      const r = await fetch(`${RANKING.url}/rest/v1/ranking_${tab}?select=nome,pontos&order=pontos.desc&limit=10`, { headers: rankHeaders() });
+      if (!r.ok) throw new Error(r.status);
+      rankData[tab] = { list: await r.json(), t: Date.now() };
+      if (tab === 'top') renderPageScores(rankData.top.list);
+    } catch (e) { rankErr = 'Sem conexão com o ranking'; }
+    rankBusy = false;
+  }
+  // filtro rápido no próprio jogo (o servidor confere de novo, com a lista completa)
+  const BAD = ['porra', 'caralho', 'buceta', 'boceta', 'piroca', 'cacete', 'merda', 'bosta', 'fuder', 'foder', 'punheta', 'arrombad', 'vagabund', 'filhodaputa', 'fuck', 'bitch'];
+  const BAD_EXACT = ['cu', 'pica', 'rola', 'puta', 'puto', 'foda', 'sexo', 'fdp', 'pqp', 'vsf', 'krl', 'kct', 'tnc', 'vtnc'];
+  function nameProblem(n) {
+    n = n.trim().replace(/\s+/g, ' ');
+    if (n.length < 2 || n.length > 12) return 'Use de 2 a 12 caracteres';
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ0-9 ._-]+$/.test(n)) return 'Use só letras, números, espaço, ponto, - ou _';
+    const k = n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[0134578@$!]/g, c => ({ 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', 8: 'b', '@': 'a', $: 's', '!': 'i' })[c]).replace(/[^a-z]/g, '');
+    if (BAD_EXACT.includes(k) || BAD.some(w => k.includes(w))) return 'Esse apelido não é permitido';
+    return '';
+  }
+  async function rankSubmit() {
+    if (!RANK_ON || (rankSent && (rankSent.ok || rankSent.wait))) return;
+    if (!playerName) { askName(n => { playerName = n; rankSubmit(); }); return; }
+    const body = { p_nome: playerName, p_pontos: score, p_distancia: Math.floor(dist / 50), p_tampinhas: caps, p_duracao: Math.max(3, Math.round(runTime)), p_plataforma: APP ? 'app' : 'site' };
+    rankSent = { wait: true, msg: 'Enviando…' };
+    try {
+      const r = await fetch(`${RANKING.url}/rest/v1/rpc/enviar_pontos`, { method: 'POST', headers: rankHeaders(), body: JSON.stringify(body) });
+      if (!r.ok) { let m = ''; try { m = (await r.json()).message || ''; } catch (e) {} throw new Error(m || r.status); }
+      rankSent = { ok: true, msg: '✓ Enviado como ' + playerName };
+      rankData.top = rankData.semana = null; rankLoad(true);
+    } catch (e) {
+      const m = String(e.message || '');
+      if (/apelido/.test(m)) { playerName = ''; try { localStorage.removeItem('jabotiRunNome'); } catch (_) {} }
+      rankSent = { ok: false, msg: /apelido|aguarde|inválid|curta|muitos/.test(m) ? m.charAt(0).toUpperCase() + m.slice(1) : 'Sem conexão. Tente de novo.' };
+      setTimeout(() => { if (rankSent && !rankSent.ok) rankSent = null; }, 3500);   // libera o botão de novo
+    }
+  }
+  // janela do apelido (HTML por cima do jogo)
+  function askName(done) {
+    const box = document.getElementById('nameBox'); if (!box) return;
+    const inp = box.querySelector('input'), err = box.querySelector('.err'), form = box.querySelector('form');
+    inp.value = playerName || ''; err.textContent = ''; box.hidden = false; setTimeout(() => inp.focus(), 50);
+    const close = () => { box.hidden = true; form.onsubmit = null; box.querySelector('.cancel').onclick = null; };
+    form.onsubmit = e => {
+      e.preventDefault();
+      const n = inp.value.trim().replace(/\s+/g, ' ').toUpperCase(), pr = nameProblem(n);
+      if (pr) { err.textContent = pr; return; }
+      try { localStorage.setItem('jabotiRunNome', n); } catch (_) {}
+      close(); done(n);
+    };
+    box.querySelector('.cancel').onclick = close;
+  }
+  function drawRank(mt) {
+    ctx.fillStyle = 'rgba(2,10,7,.78)'; ctx.fillRect(0, -menuOY, W, H);
+    const cx = W / 2;
+    text3d('RANKING', cx, 50, 44, '#ffffff', '#ffe066', '#063d27', 5);
+    gameButton('back', 96, 40, 150, 42, '◀  VOLTAR', 'ghost');
+    gameButton('rkall', cx - 92, 86, 170, 34, rankTab === 'top' ? '★ GERAL' : 'GERAL', rankTab === 'top' ? 'yellow' : 'ghost');
+    gameButton('rkweek', cx + 92, 86, 170, 34, rankTab === 'semana' ? '★ DA SEMANA' : 'DA SEMANA', rankTab === 'semana' ? 'yellow' : 'ghost');
+    const d = rankData[rankTab];
+    ctx.textBaseline = 'middle';
+    if (!d) {
+      ctx.font = `20px ${UI}`; ctx.textAlign = 'center'; ctx.fillStyle = rankErr ? '#ff8a7a' : '#eaf5e9';
+      ctx.fillText(rankErr || 'Carregando…', cx, 200);
+      if (rankErr && !rankBusy && Date.now() - rankTry > 5000) rankLoad(true);   // tenta de novo
+      return;
+    }
+    if (!d.list.length) { ctx.font = `20px ${UI}`; ctx.textAlign = 'center'; ctx.fillStyle = '#eaf5e9'; ctx.fillText('Ninguém ainda. Seja o primeiro!', cx, 200); return; }
+    const colW = 300, x0 = cx - colW - 10;
+    d.list.forEach((row, i) => {
+      const col = i < 5 ? 0 : 1, r = i % 5, x = x0 + col * (colW + 20), y = 118 + r * 44, me = playerName && row.nome.toLowerCase() === playerName.toLowerCase();
+      const k = easeOut((mt - i * .04) / .4);
+      ctx.globalAlpha = k;
+      ctx.fillStyle = me ? 'rgba(255,214,58,.22)' : 'rgba(255,255,255,.07)'; rr(x, y, colW, 38, 10); ctx.fill();
+      if (me) { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.stroke(); }
+      const medal = ['#ffd23a', '#d9e2ea', '#e09a5a'][i];
+      ctx.font = `20px ${UI}`; ctx.textAlign = 'center'; ctx.fillStyle = medal || 'rgba(234,245,233,.6)';
+      ctx.fillText(i < 3 ? ['🥇', '🥈', '🥉'][i] : String(i + 1), x + 24, y + 20);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff'; ctx.fillText(row.nome, x + 50, y + 20);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#ffd23a'; ctx.fillText(String(row.pontos).padStart(5, '0'), x + colW - 14, y + 20);
+      ctx.globalAlpha = 1;
+    });
+    if (playerName) { ctx.font = `14px ${UI}`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(234,245,233,.6)'; ctx.fillText('Você joga como ' + playerName, cx, 348); }
+  }
+  // lista HIGH SCORES na página do site
+  function renderPageScores(list) {
+    const ol = document.getElementById('pageScores'); if (!ol) return;
+    document.getElementById('scoresBox').hidden = false;
+    ol.innerHTML = '';
+    if (!list.length) { const li = document.createElement('li'); li.textContent = 'Ninguém ainda. Seja o primeiro!'; li.className = 'empty'; ol.appendChild(li); return; }
+    list.forEach((r, i) => {
+      const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('span'), c = document.createElement('span');
+      a.className = 'pos'; a.textContent = String(i + 1).padStart(2, '0'); b.className = 'nm'; b.textContent = r.nome; c.className = 'pt'; c.textContent = String(r.pontos).padStart(6, '0');
+      li.append(a, b, c); ol.appendChild(li);
+    });
+  }
+  if (RANK_ON) { rankLoad(); setInterval(() => { rankData.top = null; rankLoad(); }, 60000); }
+
   // toque nos botões do menu (coordenadas da tela → coordenadas do jogo)
   function menuHit(e) {
     if (!menuButtons.length) return false;
@@ -2620,6 +2780,9 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     if (b.id !== 'play' && b.id !== 'again') sfx.click();
     if (b.id === 'menu') { reset(); state = 'ready'; }
     else if (b.id === 'shop') state = 'shop';
+    else if (b.id === 'rank') { state = 'rank'; rankLoad(); }
+    else if (b.id === 'send') rankSubmit();
+    else if (b.id === 'rkall' || b.id === 'rkweek') { rankTab = b.id === 'rkall' ? 'top' : 'semana'; rankLoad(); }
     else if (b.id === 'back') state = 'ready';
     else if (b.id.includes(':')) { const [kind, id] = b.id.split(':'); shopTap(kind, id); }
     else if (b.id === 'resume') togglePause();
@@ -2668,8 +2831,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     requestAnimationFrame(frame);
     if (last) watchPerf(now - last);
     const root = document.documentElement;
-    root.classList.toggle('in-menu', state === 'ready' || state === 'over' || state === 'paused' || state === 'shop');
-    root.classList.toggle('no-pause', state === 'ready' || state === 'over' || state === 'shop');
+    root.classList.toggle('in-menu', state === 'ready' || state === 'over' || state === 'paused' || state === 'shop' || state === 'rank');
+    root.classList.toggle('no-pause', state === 'ready' || state === 'over' || state === 'shop' || state === 'rank');
     const pIcon = state === 'paused' ? '▶' : '❚❚';
     if (pauseBtn.textContent !== pIcon) pauseBtn.textContent = pIcon;
     nightBudget = 1;
