@@ -854,15 +854,16 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     nohander: { turns: 0, screw: 0, dur: .5, label: 'NO HANDER!', color: '#9bcb45', sc: 4 },
     tailwhip2: { turns: 0, screw: 0, dur: .66, label: 'TAILWHIP DUPLO!', color: '#ff6a5f', sc: 3, whip: 2 },
     // de BMX (pose em bx; flip = voltas para trás da bicicleta inteira)
-    bxsuper:  { turns: 0, screw: 0, dur: .58, label: 'SUPERMAN!', color: '#7fd0ff', bx: 2 },
-    bxnohand: { turns: 0, screw: 0, dur: .52, label: 'NO HANDER!', color: '#9bcb45', bx: 3 },
-    backflip: { turns: 0, screw: 0, dur: .62, label: 'BACKFLIP!', color: '#ffd84a', bx: 0, flip: 1 },
-    backflip2: { turns: 0, screw: 0, dur: .8, label: 'BACKFLIP DUPLO!', color: '#ff6a5f', bx: 0, flip: 2 }
+    bxsuper:  { turns: 0, screw: 0, dur: .58, label: 'SUPERMAN!', color: '#7fd0ff', bx: 3 },
+    bxnohand: { turns: 0, screw: 0, dur: .52, label: 'NO HANDER!', color: '#9bcb45', bx: 4 },
+    bxwhip:   { turns: 0, screw: 0, dur: .55, label: 'TAILWHIP!', color: '#f08a1c', bx: 5, whip: 1 },
+    backflip: { turns: 0, screw: 0, dur: .62, label: 'BACKFLIP!', color: '#ffd84a', bx: 2, flip: 1 },
+    backflip2: { turns: 0, screw: 0, dur: .8, label: 'BACKFLIP DUPLO!', color: '#ff6a5f', bx: 2, flip: 2 }
   };
   let lastTrick = '';
   function pickTrick() {
     if (player.jumps >= 3) return bmxOn() ? 'backflip2' : scooterOn() ? 'tailwhip2' : skateOn() ? 'duplosk' : 'duplo';
-    const opts = (bmxOn() ? ['bxsuper', 'bxnohand', 'backflip'] : scooterOn() ? ['superman', 'tailwhip', 'nohander'] : skateOn() ? ['kickflip', 'grab', 'treflip'] : ['mortal', 'reverso', 'parafuso']).filter(k => k !== lastTrick);
+    const opts = (bmxOn() ? ['bxsuper', 'bxnohand', 'bxwhip', 'backflip'] : scooterOn() ? ['superman', 'tailwhip', 'nohander'] : skateOn() ? ['kickflip', 'grab', 'treflip'] : ['mortal', 'reverso', 'parafuso']).filter(k => k !== lastTrick);
     return (lastTrick = pick(opts));
   }
   // poses das manobras (Gemini): 0 entrando, 1 e 2 encolhido como bola, 3 abrindo, 4 parafuso de braços cruzados;
@@ -917,14 +918,14 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   ];
   // de BMX os pinos (pegs) dos eixos raspam no corrimão
   const GRINDS_BX = [
-    { label: 'DOUBLE PEG!', f: 0, dy: 47, color: '#ffd84a' },
-    { label: 'FEEBLE!', f: 1, dy: 47, tilt: -.14, color: '#7fd0ff' },
-    { label: 'ICEPICK!', f: 3, dy: 47, tilt: -.3, color: '#9bcb45' }
+    { label: 'DOUBLE PEG!', f: 0, dy: 29, color: '#ffd84a' },
+    { label: 'FEEBLE!', f: 1, dy: 29, tilt: -.14, color: '#7fd0ff' },
+    { label: 'ICEPICK!', f: 1, dy: 29, tilt: -.3, color: '#9bcb45' }
   ];
   let lastGrind = null;
   const GRIND_TRUCK = 88;                                                    // distância do truck ao meio do skate (px do atlas)
   // x na tela do ponto que raspa no corrimão (truck da frente, de trás ou o meio)
-  const grindX = () => { const g = player.grind && player.grind.g; return PX + (g && g.tilt ? Math.sign(g.tilt) * (bmxOn() ? 118 : scooterOn() ? 62 : GRIND_TRUCK) * SP.scale * Math.cos(player.grind.slope) : 0); };
+  const grindX = () => { const g = player.grind && player.grind.g; return PX + (g && g.tilt ? Math.sign(g.tilt) * (bmxOn() ? 70 : scooterOn() ? 62 : GRIND_TRUCK) * SP.scale * Math.cos(player.grind.slope) : 0); };
   // obstáculos de skate onde dá para andar em cima: rampa (curva que sobe) e escadaria (degraus + patamar)
   function surfaceAt(o, x) {
     const u = x - o.x;
@@ -967,7 +968,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function playerBox() {
     const sliding = player.slide && player.ground;
-    if (bmxOn()) return { x1: PX - 50, x2: PX + 62, y1: GROUND - player.y - 150, y2: GROUND - player.y - 3 };
+    if (bmxOn()) return { x1: PX - 34, x2: PX + 56, y1: GROUND - player.y - (player.slide && player.ground ? 118 : 132), y2: GROUND - player.y - 3 };
     const h = sliding ? 86 : wheels() ? 114 : 104;
     return { x1: PX - 22, x2: PX + 24, y1: GROUND - player.y - h, y2: GROUND - player.y - 3 };
   }
@@ -1336,25 +1337,21 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     poses: [{ deck: [209, 322, 0], bar: [284, 229] }, { deck: [231, 322, 0], bar: [295, 208] }, { deck: null, bar: [306, 254] },
       { deck: null, bar: [264, 229] }, { deck: [187, 322, 0], bar: null }] };   // no-hander: mãos soltas, guidão na altura normal
   const scooterOn = () => loja.loc === 'patinete' && ok(SCOOT_IMG);
-  // BMX: aqui a bicicleta vem desenhada junto (o quadro passa na frente das pernas); todas as poses na mesma escala.
-  // células de 400 px: 0/1 pedalando, 2 superman, 3 no-hander, 4 a BMX sozinha (voa na batida). Chão em y 372.
+  // BMX: só o mascote nas poses (Gemini 12-v3); a bicicleta é desenhada em 3D pelo código (drawBmx3D), sempre igual.
+  // células de 400 px (fruta 112 px, centro em 200,150): 0 em pé nos pedais, 1 agachado, 2 bunny hop, 3 superman, 4 no-hander, 5 tailwhip.
+  // pes = ponto médio dos tênis (eixo do pedivela), ang = inclinação da linha dos pés, dist = distância entre eles,
+  // maos = ponto das mãos (guidão); solto = pés fora dos pedais (a bicicleta se prende pelas mãos)
   const BMX_IMG = new Image(); BMX_IMG.src = 'assets/mascote-bmx.webp';
-  const BX = { size: 400, cx: 200, bot: 372, axle: 76, rear: 77, front: 313,
-    fruit: [[176, 136, 61], [173, 136, 64], [186, 135, 60], [180, 157, 63], null] };   // círculos da fruta (só ela muda de cor)
+  const BX = { size: 400, poses: [
+    { pes: [212, 259], ang: .876, dist: 47, maos: [294, 153] },
+    { pes: [217, 237], ang: 0, dist: 0, maos: [265, 175] },
+    { pes: [194, 260], ang: .087, dist: 23, maos: [286, 154] },
+    { pes: [120, 233], ang: -.852, dist: 32, maos: [284, 168], solto: true },
+    { pes: [223, 239], ang: 0, dist: 0, maos: null },
+    { pes: [215, 220], ang: .017, dist: 118, maos: [296, 157], solto: true }] };
   const bmxOn = () => loja.loc === 'bmx' && ok(BMX_IMG);
   const wheels = () => skateOn() || scooterOn() || bmxOn();                 // sobre rodas: obstáculos, grind, rampas…
-  // cor da fruta / poder: recolore só dentro dos círculos da fruta (o quadro da BMX também é vermelho)
-  const bmxCache = new Map();
-  function bmxSheet(key) {
-    if (!key || !ok(BMX_IMG)) return BMX_IMG;
-    const full = tinted(BMX_IMG, key); if (full === BMX_IMG) return BMX_IMG;
-    let c = bmxCache.get(key); if (c) return c;
-    c = document.createElement('canvas'); c.width = BMX_IMG.naturalWidth; c.height = BMX_IMG.naturalHeight;
-    const g = c.getContext('2d'); g.drawImage(BMX_IMG, 0, 0); g.save(); g.beginPath();
-    BX.fruit.forEach((f, i) => { if (f) { g.moveTo(i * BX.size + f[0] + f[2], f[1]); g.arc(i * BX.size + f[0], f[1], f[2], 0, Math.PI * 2); } });
-    g.clip(); g.drawImage(full, 0, 0); g.restore();
-    bmxCache.set(key, c); return c;
-  }
+
   // estampa do skate: a imagem de lado é recolorida (faixa vermelha → cor base, faixa amarela → cor da faixa)
   const curShape = () => SHAPES.find(x => x.id === loja.shape) || SHAPES[0];
   const shapeCache = {};
@@ -1688,32 +1685,107 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       dust(ox - 92 * k, oy, 1, .5); if (Math.random() < .5) dust(ox + 80 * k, oy, 1, .5);
     }
   }
-  // ---------------- BMX ----------------
-  function bmxFrame() {
-    if (state === 'ready' || state === 'shop') return Math.floor(t * 2) % 2;
-    if (player.grind) return player.grind.g.f;
-    if (player.ground) return Math.floor((runTime || t) * (3 + speed / 220)) % 2;   // pedalando (mais rápido com a velocidade)
-    if (player.spin >= 0 && player.trick && TRICKS[player.trick].bx != null) return TRICKS[player.trick].bx;
-    return 0;
+  // ---------------- BMX desenhada em 3D (igual ao skate e ao patinete: sempre a mesma) ----------------
+  // medidas em px da célula de 400 (×k na tela); origem no chão embaixo do meio da bicicleta; x para frente, y para cima,
+  // z para perto da câmera. o: { bar: [x, y] guidão (entre as mãos), crank: ângulo do pedivela, spin: giro das rodas,
+  //   whip: giro do quadro em volta do guidão (tailwhip) }
+  const BM = { R: 46, rear: -86, front: 86, bb: [-14, 44], seat: [-44, 116], head0: [58, 92], head1: [64, 118], crankL: 22, pitch: .3,
+    bar: [44, 150], frame: '#d7262b', frameDark: '#7a0f13', rim: '#f2c41f' };
+  function drawBmx3D(k, o = {}) {
+    const cp = Math.cos(BM.pitch), sp = Math.sin(BM.pitch), cw = Math.cos(o.whip || 0), sw = Math.sin(o.whip || 0), hx = BM.head0[0];
+    const P = (x, y, z = 0, rot) => {
+      if (rot) { const dx = x - hx; x = hx + dx * cw + z * sw; z = -dx * sw + z * cw; }
+      return [x * k, -(y * cp - z * sp) * k, y * sp + z * cp];
+    };
+    const line = (a, b, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w * k; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); };
+    const tube = (a, b, w = 7) => { line(a, b, BM.frameDark, w + 2.5); line(a, b, BM.frame, w); line([a[0], a[1] - w * .25 * k], [b[0], b[1] - w * .25 * k], 'rgba(255,255,255,.35)', w * .25); };
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const spin = o.spin || 0, R = BM.R;
+    const wheel = (x, rot) => {
+      const [cx, cy] = P(x, R, 0, rot), sq = rot ? Math.max(.2, Math.abs(cw)) : 1, r = R * k;
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(sq, 1);
+      ctx.beginPath(); ctx.arc(0, 0, r - 5 * k, 0, TAU); ctx.strokeStyle = '#18181b'; ctx.lineWidth = 10 * k; ctx.stroke();               // pneu (vazado)
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5 * k; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 2 * k; for (let i = 0; i < 18; i++) { const a = i / 18 * TAU + spin; ctx.beginPath(); ctx.arc(0, 0, r - 2.5 * k, a, a + .12); ctx.stroke(); }   // cravos do pneu
+      ctx.beginPath(); ctx.arc(0, 0, r - 11 * k, 0, TAU); ctx.strokeStyle = BM.rim; ctx.lineWidth = 4.5 * k; ctx.stroke();                 // aro amarelo
+      ctx.beginPath(); ctx.arc(0, 0, r - 13.5 * k, 0, TAU); ctx.strokeStyle = 'rgba(120,80,0,.6)'; ctx.lineWidth = 1 * k; ctx.stroke();
+      ctx.strokeStyle = 'rgba(210,216,222,.85)'; ctx.lineWidth = 1 * k;                                                                    // raios girando
+      for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + spin; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 4 * k, Math.sin(a) * 4 * k); ctx.lineTo(Math.cos(a + .5) * (r - 12 * k), Math.sin(a + .5) * (r - 12 * k)); ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(0, 0, 5 * k, 0, TAU); ctx.fillStyle = '#b9c0c6'; ctx.fill();
+      ctx.restore();
+      line(P(x, R, -8, rot), P(x, R, 12, rot), '#5e6870', 7); line(P(x, R, -8, rot), P(x, R, 12, rot), '#d9dfe4', 4.5);   // pino (peg)
+    };
+    const ca = o.crank || 0, crank = s => [BM.bb[0] + Math.cos(ca + s) * BM.crankL, BM.bb[1] - Math.sin(ca + s) * BM.crankL];
+    const pedal = (q, z) => { const [x, y] = P(q[0], q[1], z, true); ctx.fillStyle = '#222'; ctx.fillRect(x - 7 * k, y - 2.5 * k, 14 * k, 5 * k); };
+    // lado de longe: pedivela e pedal de trás
+    const qf = crank(Math.PI); line(P(BM.bb[0], BM.bb[1], -6, true), P(qf[0], qf[1], -6, true), '#8d969e', 4); pedal(qf, -10);
+    wheel(BM.rear, true); wheel(BM.front, false);
+    // quadro
+    const Q = (pt, z = 0) => P(pt[0], pt[1], z, true);
+    const bb = Q(BM.bb), seat = Q(BM.seat), sc = Q([BM.seat[0] + 8, BM.seat[1] - 14]), h0 = Q(BM.head0), h1 = Q(BM.head1), ra = Q([BM.rear, R]);
+    tube(ra, bb, 6); tube(ra, sc, 5.5); tube(bb, sc, 7); tube(sc, h1, 7.5); tube(bb, h0, 8.5);
+    line(P(hx + 2, BM.head1[1] + 4), P(BM.front, R), '#5e6870', 7.5); line(P(hx + 2, BM.head1[1] + 4), P(BM.front, R), '#d9dfe4', 5);   // garfo
+    tube(h0, h1, 9);                                                                                                         // caixa de direção
+    // coroa, corrente e banco
+    ctx.beginPath(); ctx.arc(bb[0], bb[1], 11 * k, 0, TAU); ctx.fillStyle = '#c9d0d6'; ctx.fill(); ctx.strokeStyle = '#5e6870'; ctx.lineWidth = 1.5 * k; ctx.stroke();
+    ctx.beginPath(); ctx.arc(bb[0], bb[1], 4 * k, 0, TAU); ctx.fillStyle = '#5e6870'; ctx.fill();
+    line([bb[0], bb[1] - 11 * k], [ra[0], ra[1] - 5 * k], 'rgba(70,76,82,.9)', 1.6); line([bb[0], bb[1] + 11 * k], [ra[0], ra[1] + 5 * k], 'rgba(70,76,82,.9)', 1.6);
+    line(sc, seat, '#8d969e', 4.5);
+    ctx.save(); ctx.translate(seat[0], seat[1]); ctx.rotate(-.12); ctx.beginPath(); ctx.ellipse(0, -2 * k, 17 * k, 5.5 * k, 0, 0, TAU); ctx.fillStyle = '#1e1e22'; ctx.fill(); ctx.restore();
+    // guidão (riser) até o ponto das mãos
+    const bar = o.bar || BM.bar, top = P(BM.head1[0] + 2, BM.head1[1] + 8), bp = P(bar[0], bar[1]);
+    line(P(BM.head1[0], BM.head1[1]), top, '#5e6870', 7); line(P(BM.head1[0], BM.head1[1]), top, '#d9dfe4', 4.5);           // mesa
+    line(top, bp, '#5e6870', 6); line(top, bp, '#d9dfe4', 3.8);                                                              // guidão subindo
+    line([bp[0] - 12 * k, bp[1]], [bp[0] + 14 * k, bp[1]], '#5e6870', 6); line([bp[0] - 12 * k, bp[1]], [bp[0] + 14 * k, bp[1]], '#d9dfe4', 3.8);
+    line([bp[0] + 4 * k, bp[1]], [bp[0] + 16 * k, bp[1]], '#141416', 7.5);                                                   // manopla
+    // lado de perto: pedivela e pedal da frente
+    const qn = crank(0); line(P(BM.bb[0], BM.bb[1], 8, true), P(qn[0], qn[1], 8, true), '#c9d0d6', 4.5); pedal(qn, 12);
+    ctx.lineCap = 'butt';
   }
-  function drawBmxPose(f, k, tintKey) {
-    if (!ok(BMX_IMG)) return;
-    const S2 = BX.size * k;
-    ctx.drawImage(bmxSheet(tintKey), f * BX.size, 0, BX.size, BX.size, -BX.cx * k, -BX.bot * k, S2, S2);
+  // ---------------- BMX: mascote + bicicleta 3D ----------------
+  function bmxFrame() {
+    if (state === 'ready' || state === 'shop') return 0;
+    if (player.grind) return player.grind.g.f;
+    if (player.ground) return player.slide ? 1 : 0;
+    if (player.spin >= 0 && player.trick && TRICKS[player.trick].bx != null) return TRICKS[player.trick].bx;
+    return 2;                                                                // no ar: bunny hop
+  }
+  // desenha a BMX e o mascote com a origem no chão, embaixo do meio da bicicleta
+  function drawBmxPose(f, k, tintKey, o = {}) {
+    const P0 = BX.poses[f] || BX.poses[0], z = k;
+    let bb = BM.bb, bar, X0, Y0;
+    if (P0.solto) {                                                          // pés fora: a bicicleta fica presa nas mãos
+      bar = BM.bar; X0 = bar[0] * z - P0.maos[0] * z; Y0 = -bar[1] * z - P0.maos[1] * z;
+    } else {
+      X0 = bb[0] * z - P0.pes[0] * z; Y0 = -bb[1] * z - P0.pes[1] * z;     // pés no eixo do pedivela
+      bar = P0.maos ? [bb[0] + P0.maos[0] - P0.pes[0], bb[1] + P0.pes[1] - P0.maos[1]] : BM.bar;
+    }
+    const half = P0.solto || !P0.dist ? BM.crankL : clamp(P0.dist / 2, 14, 28);
+    const crank = P0.solto ? (o.crank || 0) : -P0.ang;
+    const keep = BM.crankL; BM.crankL = half;
+    const f0 = ctx.filter; if (f0 && f0 !== 'none') ctx.filter = 'none';      // arco-íris não pinta a bicicleta
+    drawBmx3D(k, { bar, crank, spin: o.spin || 0, whip: o.whip || 0 });
+    ctx.filter = f0 || 'none';
+    BM.crankL = keep;
+    if (ok(BMX_IMG)) ctx.drawImage(tinted(BMX_IMG, tintKey), f * BX.size, 0, BX.size, BX.size, X0, Y0, BX.size * z, BX.size * z);
   }
   function drawBmxRider(ox, oy, tint) {
     const k = SP.scale, f = bmxFrame(), T = player.spin >= 0 && player.trick && TRICKS[player.trick];
     const tilt = player.ground || player.grind ? 0 : clamp(-player.vy / 2400, -.2, .24);
-    const flip = T && T.flip ? -(.5 - .5 * Math.cos(Math.PI * clamp(player.spin, 0, 1))) * T.flip * TAU : 0;   // backflip
-    const bob = player.ground && state === 'running' ? Math.abs(Math.sin(t * 18)) * 1.4 : 0;
+    const e = .5 - .5 * Math.cos(Math.PI * clamp(player.spin, 0, 1));
+    const flip = T && T.flip ? -e * T.flip * TAU : 0;                        // backflip: tudo gira para trás
+    const whip = T && T.whip ? e * T.whip * TAU : 0;                         // tailwhip: o quadro gira em volta do guidão
+    const spin = (dist || t * 300) / (BM.R * k);
+    const bob = player.ground && state === 'running' ? Math.abs(Math.sin(t * 16)) * 1.2 : 0;
+    const bx0 = 18 * k;                                                      // meio da bicicleta um pouco à frente do mascote
     const draw = (x, y, r, a) => {
-      ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y - bob);
+      ctx.save(); ctx.globalAlpha *= a; ctx.translate(x + bx0, y - bob);
       if (player.grind && state === 'running') {                             // grind nos pinos: inclina na descida e no pino de trás
         const g = player.grind.g; ctx.rotate(player.grind.slope);
-        if (g.tilt) { const tx = (BX.rear - BX.cx) * k, ty = -BX.axle * k; ctx.translate(tx, ty); ctx.rotate(g.tilt); ctx.translate(-tx, -ty); }
+        if (g.tilt) { const tx = BM.rear * k, ty = -BM.R * k; ctx.translate(tx, ty); ctx.rotate(g.tilt); ctx.translate(-tx, -ty); }
       } else if (player.ground && player.slope && state === 'running') ctx.rotate(-player.slope);
-      if (r) { const cy = -150 * k; ctx.translate(0, cy); ctx.rotate(r); ctx.translate(0, -cy); }   // gira em volta do meio da bicicleta
-      drawBmxPose(f, k, tint);
+      if (r) { const cy = -80 * k; ctx.translate(0, cy); ctx.rotate(r); ctx.translate(0, -cy); }
+      drawBmxPose(f, k, tint, { spin, whip });
       ctx.restore();
     };
     const rot = tilt + flip;
@@ -1723,7 +1795,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       tr.slice(0, -1).forEach((g, i, a) => draw(g.x, g.y, g.r, .07 + .2 * (i + 1) / a.length));
     } else if (player.trail) player.trail.length = 0;
     draw(ox, oy, rot, 1);
-    if (state === 'running' && player.ground && !ghostPass && Math.random() < .4) { dust(ox + (BX.rear - BX.cx) * k, oy, 1, .6); if (Math.random() < .5) dust(ox + (BX.front - BX.cx) * k, oy, 1, .6); }
+    if (state === 'running' && player.ground && !ghostPass && Math.random() < .4) { dust(ox + bx0 + BM.rear * k, oy, 1, .6); if (Math.random() < .5) dust(ox + bx0 + BM.front * k, oy, 1, .6); }
   }
   // ---------------- patinete desenhado em 3D ----------------
   // coordenadas do patinete: x para frente, y para cima, z para perto da câmera (px da célula de 400, origem no topo da base)
@@ -1830,7 +1902,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function drawBoardFly() {
     const b = boardFly, k = SP.scale, B = SK.shape;
-    if (b.bmx) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.translate(0, 150 * k); drawBmxPose(4, k, null); ctx.restore(); return; }
+    if (b.bmx) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.translate(0, 60 * k); drawBmx3D(k, { spin: b.r * 2 }); ctx.restore(); return; }
     if (b.scooter) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); drawScooter(k, [SC.cx, SC.bot - 31, 0], null, 0, -10); ctx.restore(); return; }
     if (!ok(SKATE_SHAPE)) return;
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.drawImage(shapeImg(), -B.w / 2 * k, -B.h / 2 * k, B.w * k, B.h * k); ctx.restore();
@@ -3439,7 +3511,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     if (SKp.fx === 'galaxia') for (let i = 0; i < 5; i++) { const an = t * 1.6 + i * TAU / 5; star(pv + Math.cos(an) * 60, 220 + Math.sin(an) * 26, 3, '#ffffff'); }
     if (SKp.fx === 'arcoiris' && 'filter' in ctx) ctx.filter = `hue-rotate(${(t * 140) % 360}deg) saturate(1.3)`;
     if (bmxOn()) {
-      ctx.save(); ctx.translate(pv, 310); drawBmxPose(Math.floor(t * 2) % 2, .5, skinKey()); ctx.restore();
+      ctx.save(); ctx.translate(pv + 10, 310); drawBmxPose(0, .62, skinKey(), { spin: t * 4 }); ctx.restore();
     } else if (scooterOn()) {
       const z = .62, fr = Math.floor(t * 1.2) % 2;
       ctx.save(); ctx.translate(pv, 310); drawScooterPose(fr, z, skinKey()); ctx.restore();
@@ -3496,7 +3568,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       ctx.drawImage(tinted(sh, skinKey()), (fr % 8) * 256 + 50, Math.floor(fr / 8) * 256 + 20, 156, 140, x - 156 * z / 2, y - 140 * z / 2 - 4, 156 * z, 140 * z);
     });
     else if (shopTab === 'locomocao') grid(LOCS, 'loc', loja.loc, (it, x, y) => {
-      if (it.id === 'bmx') { ctx.translate(x, y + 30); drawBmxPose(4, .2, null); return; }
+      if (it.id === 'bmx') { ctx.translate(x, y + 24); drawBmx3D(.28, { spin: t * 4 }); return; }
       if (it.id === 'patinete') { ctx.translate(x - 4, y + 24); drawScooter(.3, [SC.cx, SC.bot - 31, 0], null, Math.sin(t * 1.2) * .5, 0); return; }
       if (it.id === 'skate') { if (ok(SKATE_ICON)) { const w = 74, h = w * SKATE_ICON.naturalHeight / SKATE_ICON.naturalWidth; ctx.drawImage(SKATE_ICON, x - w / 2, y - h / 2 - 2, w, h); } return; }
       if (!ok(SPRITES)) return; const fr = Math.floor(t * 10) % 10, z = .3;   // correndo
