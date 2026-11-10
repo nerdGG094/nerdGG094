@@ -738,11 +738,11 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       }
       return w;
     }
-    if (score > 250 && r < .07) {
+    if (score > 250 && r < .07 && !bmxOn()) {
       // drone com engradados voando em altura média: desliza por baixo ou pula por cima
       obstacles.push({ kind: 'drone', x: x0, w: 54, bottom: GROUND - 96, ph: Math.random() * TAU });
       w = 54;
-    } else if (score > 100 && r < .14) {
+    } else if (score > 100 && r < .14 && !bmxOn()) {
       // engradados pendurados por corda: só passa deslizando por baixo
       obstacles.push({ kind: 'hang', x: x0, w: CRATE_W, bottom: GROUND - 100, rows: 2, sway: Math.random() * TAU });
       w = CRATE_W;
@@ -852,12 +852,17 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     superman: { turns: 0, screw: 0, dur: .56, label: 'SUPERMAN!', color: '#7fd0ff', sc: 2 },
     tailwhip: { turns: 0, screw: 0, dur: .5, label: 'TAILWHIP!', color: '#ffd84a', sc: 3, whip: 1 },
     nohander: { turns: 0, screw: 0, dur: .5, label: 'NO HANDER!', color: '#9bcb45', sc: 4 },
-    tailwhip2: { turns: 0, screw: 0, dur: .66, label: 'TAILWHIP DUPLO!', color: '#ff6a5f', sc: 3, whip: 2 }
+    tailwhip2: { turns: 0, screw: 0, dur: .66, label: 'TAILWHIP DUPLO!', color: '#ff6a5f', sc: 3, whip: 2 },
+    // de BMX (pose em bx; flip = voltas para trás da bicicleta inteira)
+    bxsuper:  { turns: 0, screw: 0, dur: .58, label: 'SUPERMAN!', color: '#7fd0ff', bx: 2 },
+    bxnohand: { turns: 0, screw: 0, dur: .52, label: 'NO HANDER!', color: '#9bcb45', bx: 3 },
+    backflip: { turns: 0, screw: 0, dur: .62, label: 'BACKFLIP!', color: '#ffd84a', bx: 0, flip: 1 },
+    backflip2: { turns: 0, screw: 0, dur: .8, label: 'BACKFLIP DUPLO!', color: '#ff6a5f', bx: 0, flip: 2 }
   };
   let lastTrick = '';
   function pickTrick() {
-    if (player.jumps >= 3) return scooterOn() ? 'tailwhip2' : skateOn() ? 'duplosk' : 'duplo';
-    const opts = (scooterOn() ? ['superman', 'tailwhip', 'nohander'] : skateOn() ? ['kickflip', 'grab', 'treflip'] : ['mortal', 'reverso', 'parafuso']).filter(k => k !== lastTrick);
+    if (player.jumps >= 3) return bmxOn() ? 'backflip2' : scooterOn() ? 'tailwhip2' : skateOn() ? 'duplosk' : 'duplo';
+    const opts = (bmxOn() ? ['bxsuper', 'bxnohand', 'backflip'] : scooterOn() ? ['superman', 'tailwhip', 'nohander'] : skateOn() ? ['kickflip', 'grab', 'treflip'] : ['mortal', 'reverso', 'parafuso']).filter(k => k !== lastTrick);
     return (lastTrick = pick(opts));
   }
   // poses das manobras (Gemini): 0 entrando, 1 e 2 encolhido como bola, 3 abrindo, 4 parafuso de braços cruzados;
@@ -910,10 +915,16 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     { label: 'SMITH!', f: 0, dy: 14, tilt: .2, color: '#f08a1c' },
     { label: 'ICEPICK!', f: 4, dy: 14, tilt: -.12, color: '#9bcb45' }
   ];
+  // de BMX os pinos (pegs) dos eixos raspam no corrimão
+  const GRINDS_BX = [
+    { label: 'DOUBLE PEG!', f: 0, dy: 47, color: '#ffd84a' },
+    { label: 'FEEBLE!', f: 1, dy: 47, tilt: -.14, color: '#7fd0ff' },
+    { label: 'ICEPICK!', f: 3, dy: 47, tilt: -.3, color: '#9bcb45' }
+  ];
   let lastGrind = null;
   const GRIND_TRUCK = 88;                                                    // distância do truck ao meio do skate (px do atlas)
   // x na tela do ponto que raspa no corrimão (truck da frente, de trás ou o meio)
-  const grindX = () => { const g = player.grind && player.grind.g; return PX + (g && g.tilt ? Math.sign(g.tilt) * (scooterOn() ? 62 : GRIND_TRUCK) * SP.scale * Math.cos(player.grind.slope) : 0); };
+  const grindX = () => { const g = player.grind && player.grind.g; return PX + (g && g.tilt ? Math.sign(g.tilt) * (bmxOn() ? 118 : scooterOn() ? 62 : GRIND_TRUCK) * SP.scale * Math.cos(player.grind.slope) : 0); };
   // obstáculos de skate onde dá para andar em cima: rampa (curva que sobe) e escadaria (degraus + patamar)
   function surfaceAt(o, x) {
     const u = x - o.x;
@@ -943,7 +954,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     return -1;
   }
   function startGrind(o) {
-    const g = pick((scooterOn() ? GRINDS_SC : GRINDS).filter(x => x !== lastGrind)); lastGrind = g;
+    const g = pick((bmxOn() ? GRINDS_BX : scooterOn() ? GRINDS_SC : GRINDS).filter(x => x !== lastGrind)); lastGrind = g;
     const slope = o.kind === 'stairs' ? Math.atan2(o.h, o.down) : 0;
     player.grind = { o, g, t: 0, slope }; player.ground = false; player.spin = -1; player.trail = []; player.vy = 0; player.y = railTop(o, PX) - g.dy; player.jumps = 0; player.land = .6;
     popText(PX + 70, GROUND - player.y - 130, g.label, g.color); sfx.grind(); sparkle(PX + 10, GROUND - player.y - g.dy, 12, '#ffe08a');
@@ -956,6 +967,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function playerBox() {
     const sliding = player.slide && player.ground;
+    if (bmxOn()) return { x1: PX - 50, x2: PX + 62, y1: GROUND - player.y - 150, y2: GROUND - player.y - 3 };
     const h = sliding ? 86 : wheels() ? 114 : 104;
     return { x1: PX - 22, x2: PX + 24, y1: GROUND - player.y - h, y2: GROUND - player.y - 3 };
   }
@@ -976,7 +988,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     state = 'dying'; hitstop = .12; shake = 14;
     comboEnd(false); player.grind = null; player.slope = 0; player.stairDrop = 0; player.vy = 640; player.ground = false; player.deadT = 0; player.landedDead = false; player.spin = -1;
     sparkle(PX + 20, GROUND - player.y - 50, 14, '#ffffff'); sfx.hit(); skills = {};
-    if (wheels()) boardFly = { x: PX, y: GROUND - player.y - 8, vx: 260, vy: -520, r: 0, vr: 9, scooter: scooterOn() };
+    if (wheels()) boardFly = { x: PX, y: GROUND - player.y - 8, vx: 260, vy: -520, r: 0, vr: 9, scooter: scooterOn(), bmx: bmxOn() };
     loja.carteira += caps; salvarLoja();                                      // tampinhas da partida vão para a carteira
     if (score > best) { best = score; newBest = true; try { localStorage.setItem('jabotiRunBest', String(best)); } catch (e) {} }
   }
@@ -1266,7 +1278,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     { id: 'arcoiris', nome: 'ARCO-ÍRIS', preco: 700, fx: 'arcoiris' }
   ];
   // locomoção (a pé ou de skate), estampas do skate e rastros atrás do mascote
-  const LOCS = [{ id: 'pe', nome: 'A PÉ', preco: 0 }, { id: 'skate', nome: 'SKATE', preco: 400 }, { id: 'patinete', nome: 'PATINETE', preco: 450 }];
+  const LOCS = [{ id: 'pe', nome: 'A PÉ', preco: 0 }, { id: 'skate', nome: 'SKATE', preco: 400 }, { id: 'patinete', nome: 'PATINETE', preco: 450 }, { id: 'bmx', nome: 'BMX', preco: 600 }];
   const SHAPES = [
     { id: 'sh_classico', nome: 'CLÁSSICO', preco: 0, base: '#cf2329', stripe: '#f5c31a' },
     { id: 'sh_jaboti', nome: 'JABOTI', preco: 200, base: '#d7262b', stripe: '#ffd23a', pat: 'jaboti' },
@@ -1324,7 +1336,25 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     poses: [{ deck: [209, 322, 0], bar: [284, 229] }, { deck: [231, 322, 0], bar: [295, 208] }, { deck: null, bar: [306, 254] },
       { deck: null, bar: [264, 229] }, { deck: [187, 322, 0], bar: null }] };   // no-hander: mãos soltas, guidão na altura normal
   const scooterOn = () => loja.loc === 'patinete' && ok(SCOOT_IMG);
-  const wheels = () => skateOn() || scooterOn();                             // sobre rodas: obstáculos, grind, rampas…
+  // BMX: aqui a bicicleta vem desenhada junto (o quadro passa na frente das pernas); todas as poses na mesma escala.
+  // células de 400 px: 0/1 pedalando, 2 superman, 3 no-hander, 4 a BMX sozinha (voa na batida). Chão em y 372.
+  const BMX_IMG = new Image(); BMX_IMG.src = 'assets/mascote-bmx.webp';
+  const BX = { size: 400, cx: 200, bot: 372, axle: 76, rear: 77, front: 313,
+    fruit: [[176, 136, 61], [173, 136, 64], [186, 135, 60], [180, 157, 63], null] };   // círculos da fruta (só ela muda de cor)
+  const bmxOn = () => loja.loc === 'bmx' && ok(BMX_IMG);
+  const wheels = () => skateOn() || scooterOn() || bmxOn();                 // sobre rodas: obstáculos, grind, rampas…
+  // cor da fruta / poder: recolore só dentro dos círculos da fruta (o quadro da BMX também é vermelho)
+  const bmxCache = new Map();
+  function bmxSheet(key) {
+    if (!key || !ok(BMX_IMG)) return BMX_IMG;
+    const full = tinted(BMX_IMG, key); if (full === BMX_IMG) return BMX_IMG;
+    let c = bmxCache.get(key); if (c) return c;
+    c = document.createElement('canvas'); c.width = BMX_IMG.naturalWidth; c.height = BMX_IMG.naturalHeight;
+    const g = c.getContext('2d'); g.drawImage(BMX_IMG, 0, 0); g.save(); g.beginPath();
+    BX.fruit.forEach((f, i) => { if (f) { g.moveTo(i * BX.size + f[0] + f[2], f[1]); g.arc(i * BX.size + f[0], f[1], f[2], 0, Math.PI * 2); } });
+    g.clip(); g.drawImage(full, 0, 0); g.restore();
+    bmxCache.set(key, c); return c;
+  }
   // estampa do skate: a imagem de lado é recolorida (faixa vermelha → cor base, faixa amarela → cor da faixa)
   const curShape = () => SHAPES.find(x => x.id === loja.shape) || SHAPES[0];
   const shapeCache = {};
@@ -1466,6 +1496,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     const fl = wheels() && state === 'running' ? floorAt(PX) : 0;          // sombra em cima do patamar/rampa
     ctx.beginPath(); ctx.ellipse(ox, GROUND - fl + 3, (dead && player.landedDead ? 42 : 28) * sh, 5 * sh, 0, 0, TAU); ctx.fill();
 
+    if (bmxOn() && !dead) { drawBmxRider(ox, oy, tint); return; }
     if (scooterOn() && !dead) { drawScooterRider(ox, oy, tint); return; }
     if (skateOn() && !dead) { drawSkater(ox, oy, tint, X); return; }
     if (boardFly && dead) drawBoardFly();
@@ -1657,6 +1688,43 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       dust(ox - 92 * k, oy, 1, .5); if (Math.random() < .5) dust(ox + 80 * k, oy, 1, .5);
     }
   }
+  // ---------------- BMX ----------------
+  function bmxFrame() {
+    if (state === 'ready' || state === 'shop') return Math.floor(t * 2) % 2;
+    if (player.grind) return player.grind.g.f;
+    if (player.ground) return Math.floor((runTime || t) * (3 + speed / 220)) % 2;   // pedalando (mais rápido com a velocidade)
+    if (player.spin >= 0 && player.trick && TRICKS[player.trick].bx != null) return TRICKS[player.trick].bx;
+    return 0;
+  }
+  function drawBmxPose(f, k, tintKey) {
+    if (!ok(BMX_IMG)) return;
+    const S2 = BX.size * k;
+    ctx.drawImage(bmxSheet(tintKey), f * BX.size, 0, BX.size, BX.size, -BX.cx * k, -BX.bot * k, S2, S2);
+  }
+  function drawBmxRider(ox, oy, tint) {
+    const k = SP.scale, f = bmxFrame(), T = player.spin >= 0 && player.trick && TRICKS[player.trick];
+    const tilt = player.ground || player.grind ? 0 : clamp(-player.vy / 2400, -.2, .24);
+    const flip = T && T.flip ? -(.5 - .5 * Math.cos(Math.PI * clamp(player.spin, 0, 1))) * T.flip * TAU : 0;   // backflip
+    const bob = player.ground && state === 'running' ? Math.abs(Math.sin(t * 18)) * 1.4 : 0;
+    const draw = (x, y, r, a) => {
+      ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y - bob);
+      if (player.grind && state === 'running') {                             // grind nos pinos: inclina na descida e no pino de trás
+        const g = player.grind.g; ctx.rotate(player.grind.slope);
+        if (g.tilt) { const tx = (BX.rear - BX.cx) * k, ty = -BX.axle * k; ctx.translate(tx, ty); ctx.rotate(g.tilt); ctx.translate(-tx, -ty); }
+      } else if (player.ground && player.slope && state === 'running') ctx.rotate(-player.slope);
+      if (r) { const cy = -150 * k; ctx.translate(0, cy); ctx.rotate(r); ctx.translate(0, -cy); }   // gira em volta do meio da bicicleta
+      drawBmxPose(f, k, tint);
+      ctx.restore();
+    };
+    const rot = tilt + flip;
+    if (player.spin >= 0) {                                                  // rastro da manobra
+      const tr = player.trail || (player.trail = []);
+      if (state === 'running' && !ghostPass) { tr.forEach(g => g.x -= speed / 60 * .55); tr.push({ x: ox, y: oy, r: rot }); if (tr.length > 5) tr.shift(); }
+      tr.slice(0, -1).forEach((g, i, a) => draw(g.x, g.y, g.r, .07 + .2 * (i + 1) / a.length));
+    } else if (player.trail) player.trail.length = 0;
+    draw(ox, oy, rot, 1);
+    if (state === 'running' && player.ground && !ghostPass && Math.random() < .4) { dust(ox + (BX.rear - BX.cx) * k, oy, 1, .6); if (Math.random() < .5) dust(ox + (BX.front - BX.cx) * k, oy, 1, .6); }
+  }
   // ---------------- patinete desenhado em 3D ----------------
   // coordenadas do patinete: x para frente, y para cima, z para perto da câmera (px da célula de 400, origem no topo da base)
   const SCG = { half: 62, th: 9, w: 15, rear: -73, front: 86, ay: -12, r: 19, hx: 80, hy: 42, pitch: .3 };
@@ -1762,6 +1830,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
   function drawBoardFly() {
     const b = boardFly, k = SP.scale, B = SK.shape;
+    if (b.bmx) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.translate(0, 150 * k); drawBmxPose(4, k, null); ctx.restore(); return; }
     if (b.scooter) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); drawScooter(k, [SC.cx, SC.bot - 31, 0], null, 0, -10); ctx.restore(); return; }
     if (!ok(SKATE_SHAPE)) return;
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.drawImage(shapeImg(), -B.w / 2 * k, -B.h / 2 * k, B.w * k, B.h * k); ctx.restore();
@@ -2328,8 +2397,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   }
 
   // trechos de cenário (Gemini): o fundo muda com a distância, com transição suave de 60 m.
-  // DESLIGADO a pedido do usuário: o fundo fica sempre o campo com a fábrica Jaboti (ligar = BIOMES_ON true)
-  const BIOMES_ON = false;
+  const BIOMES_ON = true;                                                    // religado a pedido do usuário (2026-11-09)
   const BIOMES = ['campo', 'canavial', 'cidade', 'fabrica'];
   const BIOME_NAME = { canavial: '🌾 CANAVIAL', cidade: '🏙️ CIDADE', fabrica: '🏭 DENTRO DA FÁBRICA', campo: '🌳 CAMPO' };
   const TRECHO = {};
@@ -2347,7 +2415,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   function drawSceneryImg() {
     const bw = biomeWeights();
     const cur = Object.keys(bw).reduce((a, b) => bw[a] >= bw[b] ? a : b);
-    if (cur !== lastBiome) { if (state === 'running' && dist > 0) popText(W / 2, 80, BIOME_NAME[cur], '#ffffff'); lastBiome = cur; }
+    if (cur !== lastBiome) { if (state === 'running' && dist > 0) popText(W / 2, 175, BIOME_NAME[cur], '#ffffff'); lastBiome = cur; }
     nightFilter(.55);
     ctx.save(); ctx.globalAlpha = bw.campo;
     if (bw.campo > .01) {
@@ -2375,8 +2443,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     // dentro da fábrica: cobre o fundo todo, do teto até a pista, com luz própria (escurece pouco à noite)
     if (bw.fabrica > .01 && ok(TRECHO.fabrica)) {
       ctx.save(); ctx.globalAlpha = bw.fabrica;
-      ctx.fillStyle = '#2b3d36'; ctx.fillRect(0, 0, W, GROUND - 230);
-      nightFilter(.2); strip(TRECHO.fabrica, .2, GROUND - 240, 240, true); nightFilter(.55);
+      ctx.fillStyle = '#26282d'; ctx.fillRect(0, 0, W, 8);                 // galpão ocupa a tela toda (teto em arco no alto)
+      nightFilter(.2); strip(TRECHO.fabrica, .2, 2, GROUND - 2, true); nightFilter(.55);
       ctx.restore();
     }
     
@@ -2414,6 +2482,8 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       ctx.fillStyle = g; ctx.fillRect(0, GROUND, W, H - GROUND);
       if (sc('rua')) strip(SCENE.rua, 1, GROUND - 18, 92, false);   // guia com luzes + calçada
       else strip(chao, 1, GROUND - 24, 96);
+      const fab = biomeWeights().fabrica;
+      if (fab > .01) { ctx.save(); ctx.globalAlpha = fab; if (ok(PISO_FAB)) { ctx.fillStyle = '#9aa1a6'; ctx.fillRect(0, GROUND - 24, W, H); strip(PISO_FAB, 1, GROUND - 24, 100, false); } else drawFactoryFloor(); ctx.restore(); }
             return;
     }
     const off = dist % 48;
@@ -2440,6 +2510,27 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     for (let x = -((dist) % 68); x < W; x += 68) { ctx.fillRect(x + 4, GROUND + 10, 26, 2); ctx.fillRect(x + 38, GROUND + 28, 22, 2); }
   }
 
+  // piso de dentro da fábrica (desenhado no código): faixa de segurança amarela e preta + concreto epóxi com juntas
+  function drawFactoryFloor() {
+    const top = GROUND - 18, off = dist % 160;
+    const g = ctx.createLinearGradient(0, top, 0, H); g.addColorStop(0, '#b9bec2'); g.addColorStop(1, '#8e9599');
+    ctx.fillStyle = g; ctx.fillRect(0, top, W, H - top);
+    ctx.fillStyle = 'rgba(255,255,255,.10)'; ctx.fillRect(0, top + 22, W, 6);                       // brilho do epóxi
+    ctx.strokeStyle = 'rgba(70,76,80,.35)'; ctx.lineWidth = 2; ctx.beginPath();                      // juntas das placas
+    ctx.moveTo(0, top + 46); ctx.lineTo(W, top + 46);
+    for (let x = -off; x < W + 160; x += 160) { ctx.moveTo(x, top + 14); ctx.lineTo(x - 18, H); }
+    ctx.stroke();
+    ctx.fillStyle = '#1d1f22'; ctx.fillRect(0, top, W, 14);                                           // faixa de segurança
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, 14); ctx.clip(); ctx.fillStyle = '#f2c41f';
+    const so = dist % 28;
+    for (let x = -so - 28; x < W + 28; x += 28) { ctx.beginPath(); ctx.moveTo(x, top + 14); ctx.lineTo(x + 14, top); ctx.lineTo(x + 28, top); ctx.lineTo(x + 14, top + 14); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(0, top + 14, W, 3);
+    for (let x = -((dist) % 240) + 60; x < W; x += 240) {                                              // grelha de ralo de inox
+      ctx.fillStyle = '#c9d0d6'; ctx.fillRect(x, top + 58, 46, 12); ctx.fillStyle = '#6b737a';
+      for (let i = 0; i < 6; i++) ctx.fillRect(x + 4 + i * 7, top + 60, 3, 8);
+    }
+  }
   // primeiro plano bem perto da câmera (Gemini): passa mais rápido que a pista, grande e desfocado.
   // FG_CELLS: [x na tira, y, largura, altura, altura na tela, peso no sorteio]
   const FG_IMG = new Image(); FG_IMG.src = 'assets/cenario/primeiro-plano.webp';
@@ -2454,25 +2545,53 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     [775, 13, 98, 167, 150, 2]    // vaso com palmeira
   ];
   const FG_TOTAL = FG_CELLS.reduce((a, c) => a + c[5], 0);
-  function drawNearFg() {
-    if (!ok(FG_IMG) || state === 'ready') return;
-    nightFilter(.6);
-    const src = N(blurred(FG_IMG, 1.4)), fo = dist * 1.4, tile = 520;
+  // dentro da fábrica: pilar, engradados, bombona, extintor, cone, fardo, paleteira, cavalete (Gemini 14B)
+  const PISO_FAB = new Image(); PISO_FAB.src = 'assets/cenario/piso-fabrica.webp';
+  const FG_FAB_IMG = new Image(); FG_FAB_IMG.src = 'assets/cenario/primeiro-plano-fabrica.webp';
+  const FG_FAB_CELLS = [
+    [0, 0, 53, 180, 330, 1],       // pilar amarelo
+    [61, 0, 137, 180, 128, 3],     // engradados
+    [206, 0, 125, 180, 108, 3],    // bombona azul
+    [339, 0, 88, 180, 115, 2],     // extintor
+    [0, 0, 0, 0, 86, 3, 'cone'],   // cone (o mesmo dos obstáculos)
+    [583, 0, 215, 180, 104, 3],    // fardo de garrafas
+    [0, 0, 0, 0, 98, 2, 'paleteira'],   // paleteira (a mesma dos obstáculos)
+    [1003, 0, 160, 180, 104, 2]    // cavalete de piso molhado
+  ];
+  function drawFgSet(img, cells, alpha) {
+    const total = cells.reduce((a, c) => a + c[5], 0);
+    const src = N(blurred(img, 1.4)), fo = dist * 1.4, tile = 520;
     for (let k = Math.floor(fo / tile) - 1; k <= Math.floor((fo + W) / tile) + 1; k++) {
       if (hash(k * 5.7) < .35) continue;                                  // nem todo trecho tem objeto
-      let r = hash(k * 2.9) * FG_TOTAL, i = 0;
-      while (r > FG_CELLS[i][5]) { r -= FG_CELLS[i][5]; i++; }
-      const [sx, sy, sw, sh, th] = FG_CELLS[i], tw = sw * th / sh;
+      let r = hash(k * 2.9) * total, i = 0;
+      while (r > cells[i][5]) { r -= cells[i][5]; i++; }
+      let [sx, sy, sw, sh, th, , own] = cells[i], im = src;
+      if (own) { const o = sc(own); if (!o) continue; im = N(blurred(o, 1.4)); sx = 0; sy = 0; sw = o.naturalWidth; sh = o.naturalHeight; }   // imagem própria do jogo
+      const tw = sw * th / sh;
       const x = k * tile + hash(k * 8.3) * 260 - fo, base = H + 18 + hash(k * 1.7) * 14;
       if (x + tw < 0 || x > W) continue;
       const near = x < PX + 70 && x + tw > PX - 70;                        // passando na frente do mascote
-      ctx.globalAlpha = near ? .45 : th > 200 ? .6 : .92;               // altos (poste, placa) mais transparentes: não escondem obstáculos
-      ctx.drawImage(src, sx, sy, sw, sh, x, base - th, tw, th);
+      ctx.globalAlpha = (near ? .45 : th > 200 ? .6 : .92) * alpha;       // altos (poste, pilar) mais transparentes: não escondem obstáculos
+      ctx.drawImage(im, sx, sy, sw, sh, x, base - th, tw, th);
     }
     ctx.globalAlpha = 1;
   }
+  function drawNearFg() {
+    if (state === 'ready') return;
+    const fab = biomeWeights().fabrica;
+    nightFilter(.6);
+    if (fab < .99 && ok(FG_IMG)) drawFgSet(FG_IMG, FG_CELLS, 1 - fab);          // rua: poste, moita, capim, hidrante…
+    if (fab > .01 && ok(FG_FAB_IMG)) drawFgSet(FG_FAB_IMG, FG_FAB_CELLS, fab);   // fábrica
+  }
+
   function drawForeground() {
-    const fo = dist * 1.3, tuft = sc('grama');
+    const fo = dist * 1.3, tuft = sc('grama'), fora = 1 - biomeWeights().fabrica;   // capim só do lado de fora
+    if (fora < .01) return;
+    ctx.save(); ctx.globalAlpha = fora;
+    drawGrassTufts(fo, tuft);
+    ctx.restore();
+  }
+  function drawGrassTufts(fo, tuft) {
     if (tuft) {
       nightFilter(.5);
       for (let k = Math.floor(fo / 70) - 1; k <= Math.floor((fo + W) / 70) + 1; k++) {
@@ -3319,7 +3438,9 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
     if (loja.rastro) { ctx.save(); ctx.translate(pv - 62, 240); ctx.scale(1.4, 1.4); drawTrailIcon(loja.rastro, 0, 0, true); ctx.restore(); }
     if (SKp.fx === 'galaxia') for (let i = 0; i < 5; i++) { const an = t * 1.6 + i * TAU / 5; star(pv + Math.cos(an) * 60, 220 + Math.sin(an) * 26, 3, '#ffffff'); }
     if (SKp.fx === 'arcoiris' && 'filter' in ctx) ctx.filter = `hue-rotate(${(t * 140) % 360}deg) saturate(1.3)`;
-    if (scooterOn()) {
+    if (bmxOn()) {
+      ctx.save(); ctx.translate(pv, 310); drawBmxPose(Math.floor(t * 2) % 2, .5, skinKey()); ctx.restore();
+    } else if (scooterOn()) {
       const z = .62, fr = Math.floor(t * 1.2) % 2;
       ctx.save(); ctx.translate(pv, 310); drawScooterPose(fr, z, skinKey()); ctx.restore();
     } else if (skateOn()) {
@@ -3375,6 +3496,7 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
       ctx.drawImage(tinted(sh, skinKey()), (fr % 8) * 256 + 50, Math.floor(fr / 8) * 256 + 20, 156, 140, x - 156 * z / 2, y - 140 * z / 2 - 4, 156 * z, 140 * z);
     });
     else if (shopTab === 'locomocao') grid(LOCS, 'loc', loja.loc, (it, x, y) => {
+      if (it.id === 'bmx') { ctx.translate(x, y + 30); drawBmxPose(4, .2, null); return; }
       if (it.id === 'patinete') { ctx.translate(x - 4, y + 24); drawScooter(.3, [SC.cx, SC.bot - 31, 0], null, Math.sin(t * 1.2) * .5, 0); return; }
       if (it.id === 'skate') { if (ok(SKATE_ICON)) { const w = 74, h = w * SKATE_ICON.naturalHeight / SKATE_ICON.naturalWidth; ctx.drawImage(SKATE_ICON, x - w / 2, y - h / 2 - 2, w, h); } return; }
       if (!ok(SPRITES)) return; const fr = Math.floor(t * 10) % 10, z = .3;   // correndo
@@ -3608,11 +3730,11 @@ else { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 
   // decodifica todas as imagens já no início (as folhas dos poderes têm 2400×900);
   // sem isso o primeiro uso de cada uma trava o jogo por uma fração de segundo
   const warmCtx = document.createElement('canvas').getContext('2d');
-  [...Object.values(IMG), ...Object.values(SCENE), BOTTLES, SPRITES, LATA_IMG, SLIDE_IMG, MORTAL_IMG, POSES_IMG, GAS_IMG, SUN_IMG, MOON_IMG, CLOUDS_IMG, OUTDOOR_NIGHT, DRONE_IMG, FABRICA_NIGHT, FG_IMG, ...Object.values(ACC_SHEET), ...Object.values(ACC_SLIDE), ...Object.values(TRECHO), SKATE_IMG, SKATE_ICON, SKATE_SHAPE, SCOOT_IMG]
+  [...Object.values(IMG), ...Object.values(SCENE), BOTTLES, SPRITES, LATA_IMG, SLIDE_IMG, MORTAL_IMG, POSES_IMG, GAS_IMG, SUN_IMG, MOON_IMG, CLOUDS_IMG, OUTDOOR_NIGHT, DRONE_IMG, FABRICA_NIGHT, FG_IMG, ...Object.values(ACC_SHEET), ...Object.values(ACC_SLIDE), ...Object.values(TRECHO), SKATE_IMG, SKATE_ICON, SKATE_SHAPE, SCOOT_IMG, PISO_FAB, FG_FAB_IMG, BMX_IMG]
     .forEach(im => (im.decode ? im.decode() : Promise.resolve()).then(() => warmCtx.drawImage(im, 0, 0, 1, 1)).catch(() => {}));
   // prepara as versões coloridas do mascote aos poucos, uma por vez, para a primeira garrafa não travar o jogo
   const tintJobs = [];
-  const warmAcc = () => { const sh = loja.loc === 'skate' ? SKATE_IMG : loja.loc === 'patinete' ? SCOOT_IMG : loja.acc && ACC_SHEET[loja.acc]; if (sh) Object.keys(POWER_TINT).forEach(k => tintJobs.unshift([sh, k])); };
+  const warmAcc = () => { const sh = loja.loc === 'skate' ? SKATE_IMG : loja.loc === 'patinete' ? SCOOT_IMG : loja.loc === 'bmx' ? BMX_IMG : loja.acc && ACC_SHEET[loja.acc]; if (sh) Object.keys(POWER_TINT).forEach(k => tintJobs.unshift([sh, k])); };
   if (skinKey()) [SPRITES, SLIDE_IMG, MORTAL_IMG, POSES_IMG].forEach(im => tintJobs.push([im, skinKey()]));   // cor comprada primeiro
   warmAcc();
   Object.keys(POWER_TINT).forEach(k => [SPRITES, SLIDE_IMG, MORTAL_IMG].forEach(im => tintJobs.push([im, k])));
